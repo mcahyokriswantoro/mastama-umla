@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 export async function GET() {
   try {
@@ -103,15 +103,21 @@ export async function GET() {
       }
     }
 
-    const workbook = XLSX.utils.book_new();
+    const workbook = new ExcelJS.Workbook();
+    
+    const recapSheet = workbook.addWorksheet('Rekap Passport');
+    if (passportRecapData.length > 0) {
+      recapSheet.columns = Object.keys(passportRecapData[0]).map(key => ({ header: key, key: key }));
+      recapSheet.addRows(passportRecapData);
+    }
 
-    const recapSheet = XLSX.utils.json_to_sheet(passportRecapData);
-    XLSX.utils.book_append_sheet(workbook, recapSheet, 'Rekap Passport');
+    const detailSheet = workbook.addWorksheet('Detail Submissions');
+    if (detailedSubmissionsData.length > 0) {
+      detailSheet.columns = Object.keys(detailedSubmissionsData[0]).map(key => ({ header: key, key: key }));
+      detailSheet.addRows(detailedSubmissionsData);
+    }
 
-    const detailSheet = XLSX.utils.json_to_sheet(detailedSubmissionsData);
-    XLSX.utils.book_append_sheet(workbook, detailSheet, 'Detail Submissions');
-
-    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const buffer = await workbook.xlsx.writeBuffer();
 
     // Audit log
     await prisma.auditLog.create({

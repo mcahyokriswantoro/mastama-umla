@@ -16,7 +16,9 @@ import {
   Sparkles,
   Flame,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Menu,
+  X
 } from 'lucide-react';
 import { UserSession } from '@/types';
 
@@ -27,6 +29,11 @@ export default function Navbar() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+
+  useEffect(() => {
+    setShowMobileMenu(false);
+  }, [pathname]);
 
   useEffect(() => {
     fetchUser();
@@ -75,7 +82,7 @@ export default function Navbar() {
               className="h-7 sm:h-8 w-auto object-contain drop-shadow-sm opacity-90 group-hover:opacity-100 transition-opacity"
             />
           </div>
-          <div>
+          <div className="hidden sm:block">
             <div className="flex items-center gap-1.5">
               <span className="font-extrabold text-base sm:text-lg tracking-wider text-white">MASTAMA</span>
             </div>
@@ -252,6 +259,14 @@ export default function Navbar() {
                 )}
               </div>
 
+              {/* Mobile Menu Toggle */}
+              <button
+                onClick={() => setShowMobileMenu(!showMobileMenu)}
+                className="md:hidden p-2 rounded-xl text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
+              >
+                {showMobileMenu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+
               {/* User Dropdown */}
               <div className="relative">
                 <button
@@ -326,6 +341,129 @@ export default function Navbar() {
           )}
         </div>
       </div>
+
+      {/* Mobile Menu */}
+      {showMobileMenu && currentUser && (
+        <div className="md:hidden border-t border-white/10 bg-umla-navy-950 px-4 py-3 shadow-xl animate-in fade-in slide-in-from-top-2">
+          <nav className="flex flex-col gap-1.5">
+            {isStudent && (
+              <>
+                <Link
+                  href="/dashboard"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    pathname === '/dashboard' ? 'bg-umla-gold/20 text-umla-gold border border-umla-gold/40' : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  href="/journey"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    pathname.startsWith('/journey') ? 'bg-umla-gold/20 text-umla-gold border border-umla-gold/40' : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  MASTAMA Journey
+                </Link>
+                <Link
+                  href="/missions"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    pathname === '/missions' ? 'bg-umla-gold/20 text-umla-gold border border-umla-gold/40' : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  Misi & Tracker
+                </Link>
+                <Link
+                  href="/passport"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-1.5 ${
+                    pathname === '/passport' ? 'bg-umla-gold text-umla-navy-950 font-bold shadow-lg shadow-umla-gold/20' : 'text-umla-gold hover:bg-umla-gold/10'
+                  }`}
+                >
+                  <Award className="w-4 h-4" />
+                  Passport Saya
+                </Link>
+              </>
+            )}
+
+            {isMentor && (
+              <>
+                <Link
+                  href="/mentor/dashboard"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    pathname === '/mentor/dashboard' ? 'bg-umla-gold/20 text-umla-gold border border-umla-gold/40' : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  Dashboard Pendamping
+                </Link>
+                <Link
+                  href="/mentor/approvals"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-1.5 ${
+                    pathname === '/mentor/approvals' ? 'bg-umla-gold/20 text-umla-gold border border-umla-gold/40' : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  Approval Center
+                </Link>
+                <Link
+                  href="/mentor/members"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    pathname === '/mentor/members' ? 'bg-umla-gold/20 text-umla-gold border border-umla-gold/40' : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  Kelompok Saya
+                </Link>
+              </>
+            )}
+
+            {isAdmin && (
+              <>
+                <Link
+                  href="/admin/dashboard"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    pathname === '/admin/dashboard' ? 'bg-umla-gold/20 text-umla-gold border border-umla-gold/40' : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  Admin Panel
+                </Link>
+                <Link
+                  href="/admin/groups"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    pathname === '/admin/groups' ? 'bg-umla-gold/20 text-umla-gold border border-umla-gold/40' : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  40 Kelompok
+                </Link>
+                <Link
+                  href="/admin/activities"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    pathname === '/admin/activities' ? 'bg-umla-gold/20 text-umla-gold border border-umla-gold/40' : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  Kegiatan & Journey
+                </Link>
+                <Link
+                  href="/admin/reports"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    pathname === '/admin/reports' ? 'bg-umla-gold/20 text-umla-gold border border-umla-gold/40' : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  Laporan & Export
+                </Link>
+              </>
+            )}
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

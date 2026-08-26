@@ -68,13 +68,32 @@ export default function LoginPage() {
     }
   };
 
-  const handleForgotSubmit = (e: React.FormEvent) => {
+  const [forgotError, setForgotError] = useState<string | null>(null);
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setForgotLoading(true);
-    setTimeout(() => {
-      setForgotLoading(false);
+    setForgotError(null);
+    
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Terjadi kesalahan');
+      }
+      
       setForgotSubmitted(true);
-    }, 800);
+    } catch (err: any) {
+      setForgotError(err.message);
+    } finally {
+      setForgotLoading(false);
+    }
   };
 
   return (
@@ -227,6 +246,13 @@ export default function LoginPage() {
                     <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
                   </div>
                 </div>
+
+                {forgotError && (
+                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[11px] flex items-center gap-2">
+                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                    <p>{forgotError}</p>
+                  </div>
+                )}
 
                 <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-[11px] text-gray-300 space-y-1.5">
                   <p className="font-semibold text-white flex items-center gap-1.5">
