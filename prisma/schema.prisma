@@ -1,0 +1,439 @@
+// Prisma schema for MASTAMA UMLA - Digital Student Passport
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+enum Role {
+  STUDENT
+  GROUP_MENTOR
+  ADMIN
+}
+
+enum GroupStatus {
+  OPEN
+  FULL
+  LOCKED
+}
+
+enum GroupAssignMode {
+  STUDENT_SELECT
+  ADMIN_ASSIGN
+}
+
+enum ActivityMode {
+  ONLINE
+  OFFLINE
+}
+
+enum VerificationType {
+  QR
+  PHOTO
+  PHOTO_DESC
+  MENTOR_ATTENDANCE
+  ONLINE
+  MANUAL
+  QR_PHOTO
+  QR_PHOTO_DESC
+}
+
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum MissionCategory {
+  MASTAMA
+  ORMAWA
+  SPIRITUAL
+  AI_CHALLENGE
+  CAMPUS
+}
+
+enum AiProjectStage {
+  IDE
+  EKSEKUSI
+  LAPORAN
+  COMPLETED
+  PROPOSAL
+  DEVELOPMENT
+  SUBMISSION
+  PRESENTATION
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  fullName      String
+  role          Role      @default(STUDENT)
+  phoneNumber   String?
+  avatarUrl     String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  studentProfile           StudentProfile?
+  mentorAssignments        GroupMentorAssignment[]
+  reviewedApprovals        Approval[]              @relation("MentorApprovals")
+  verifiedAttendances      Attendance[]            @relation("MentorAttendance")
+  notifications            Notification[]
+  auditLogs                AuditLog[]
+  announcements            Announcement[]
+}
+
+model Faculty {
+  id            String         @id @default(cuid())
+  code          String         @unique
+  name          String
+  icon          String?
+  studyPrograms StudyProgram[]
+  students      StudentProfile[]
+}
+
+model StudyProgram {
+  id          String         @id @default(cuid())
+  facultyId   String
+  code        String         @unique
+  name        String
+  degree      String         @default("S1")
+  faculty     Faculty        @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  students    StudentProfile[]
+}
+
+model MastamaYear {
+  id                String          @id @default(cuid())
+  year              Int             @unique
+  name              String
+  isActive          Boolean         @default(true)
+  groupAssignMode   GroupAssignMode @default(ADMIN_ASSIGN)
+  createdAt         DateTime        @default(now())
+
+  groups            Group[]
+  journeys          Journey[]
+  students          StudentProfile[]
+}
+
+model Group {
+  id              String         @id @default(cuid())
+  mastamaYearId   String
+  number          Int
+  name            String
+  capacity        Int            @default(30)
+  status          GroupStatus    @default(OPEN)
+  createdAt       DateTime       @default(now())
+
+  mastamaYear     MastamaYear    @relation(fields: [mastamaYearId], references: [id], onDelete: Cascade)
+  students        StudentProfile[]
+  mentorAssignments GroupMentorAssignment[]
+
+  @@unique([mastamaYearId, number])
+}
+
+model GroupMentorAssignment {
+  id         String   @id @default(cuid())
+  groupId    String
+  mentorId   String
+  createdAt  DateTime @default(now())
+
+  group      Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  mentor     User     @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, mentorId])
+}
+
+model StudentProfile {
+  id              String         @id @default(cuid())
+  userId          String         @unique
+  nim             String         @unique
+  facultyId       String
+  studyProgramId  String
+  mastamaYearId   String
+  groupId         String?
+  bio             String?
+  qrCodeSecret    String         @default(cuid())
+  totalXp         Int            @default(0)
+  streakCount     Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  faculty         Faculty        @relation(fields: [facultyId], references: [id])
+  studyProgram    StudyProgram   @relation(fields: [studyProgramId], references: [id])
+  mastamaYear     MastamaYear    @relation(fields: [mastamaYearId], references: [id])
+  group           Group?         @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  submissions     ActivitySubmission[]
+  attendances     Attendance[]
+  userBadges      UserBadge[]
+  xpTransactions  XpTransaction[]
+  aiProjects      AiProject[]
+  ormawaLogs      OrmawaParticipation[]
+  spiritualLogs   SpiritualParticipation[]
+}
+
+model Journey {
+  id            String        @id @default(cuid())
+  mastamaYearId String
+  code          String
+  title         String
+  subtitle      String?
+  targetDate    DateTime
+  mode          ActivityMode  @default(OFFLINE)
+  location      String?
+  orderNum      Int           @default(1)
+  isUnlocked    Boolean       @default(true)
+  icon          String?
+
+  mastamaYear   MastamaYear   @relation(fields: [mastamaYearId], references: [id], onDelete: Cascade)
+  missions      Mission[]
+  activities    Activity[]
+
+  @@unique([mastamaYearId, code])
+}
+
+model Mission {
+  id              String          @id @default(cuid())
+  journeyId       String?
+  code            String          @unique
+  title           String
+  description     String
+  category        MissionCategory @default(MASTAMA)
+  targetCount     Int             @default(1)
+  xpReward        Int             @default(50)
+  badgeRewardCode String?
+  icon            String?
+
+  journey         Journey?        @relation(fields: [journeyId], references: [id], onDelete: SetNull)
+  activities      Activity[]
+}
+
+model Activity {
+  id                String           @id @default(cuid())
+  journeyId         String?
+  missionId         String?
+  code              String           @unique
+  title             String
+  subtitle          String?
+  description       String
+  bannerImage       String?
+  date              DateTime
+  startTime         String
+  endTime           String
+  location          String
+  mode              ActivityMode     @default(OFFLINE)
+  picName           String?
+  picContact        String?
+  onlineUrl         String?
+  verificationType  VerificationType @default(PHOTO_DESC)
+  xpReward          Int              @default(50)
+  qrSecret          String?          @default(cuid())
+  qrExpiresAt       DateTime?
+  isActive          Boolean          @default(true)
+  orderNum          Int              @default(1)
+
+  journey           Journey?         @relation(fields: [journeyId], references: [id], onDelete: SetNull)
+  mission           Mission?         @relation(fields: [missionId], references: [id], onDelete: SetNull)
+  submissions       ActivitySubmission[]
+  attendances       Attendance[]
+}
+
+model ActivitySubmission {
+  id              String           @id @default(cuid())
+  studentId       String
+  activityId      String
+  status          SubmissionStatus @default(SUBMITTED)
+  activityTitle   String
+  description     String
+  evidencePhoto   String?
+  submissionDate  DateTime         @default(now())
+  submissionTime  String
+  locationNote    String?
+  extraNotes      String?
+  submittedAt     DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  student         StudentProfile   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  activity        Activity         @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  approvals       Approval[]
+
+  @@unique([studentId, activityId])
+}
+
+model Approval {
+  id             String           @id @default(cuid())
+  submissionId   String
+  reviewerId     String
+  status         SubmissionStatus
+  feedback       String?
+  reviewedAt     DateTime         @default(now())
+
+  submission     ActivitySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  reviewer       User               @relation("MentorApprovals", fields: [reviewerId], references: [id], onDelete: Cascade)
+}
+
+model Attendance {
+  id             String           @id @default(cuid())
+  studentId      String
+  activityId     String
+  checkInTime    DateTime         @default(now())
+  checkInMethod  String           @default("QR")
+  verifiedById   String?
+  status         String           @default("PRESENT")
+
+  student        StudentProfile   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  activity       Activity         @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  verifiedBy     User?            @relation("MentorAttendance", fields: [verifiedById], references: [id])
+
+  @@unique([studentId, activityId])
+}
+
+model Badge {
+  id                 String      @id @default(cuid())
+  code               String      @unique
+  name               String
+  description        String
+  icon               String
+  category           String      @default("MASTAMA")
+  xpRequirement      Int         @default(0)
+  activityRequirement Int        @default(0)
+  stampName          String?
+
+  userBadges         UserBadge[]
+}
+
+model UserBadge {
+  id          String         @id @default(cuid())
+  studentId   String
+  badgeId     String
+  unlockedAt  DateTime       @default(now())
+
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  badge       Badge          @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, badgeId])
+}
+
+model XpTransaction {
+  id          String         @id @default(cuid())
+  studentId   String
+  amount      Int
+  sourceType  String
+  sourceId    String?
+  description String
+  createdAt   DateTime       @default(now())
+
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model OrmawaParticipation {
+  id            String         @id @default(cuid())
+  studentId     String
+  activityIndex Int
+  title         String
+  ormawaName    String
+  date          DateTime
+  evidencePhoto String?
+  description   String
+  status        SubmissionStatus @default(SUBMITTED)
+  rejectionNote String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  student       StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, activityIndex])
+}
+
+model SpiritualParticipation {
+  id            String         @id @default(cuid())
+  studentId     String
+  slotIndex     Int
+  date          DateTime
+  location      String         @default("Masjid UMLA")
+  evidencePhoto String?
+  status        SubmissionStatus @default(SUBMITTED)
+  rejectionNote String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  student       StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, slotIndex])
+}
+
+model AiProject {
+  id            String         @id @default(cuid())
+  studentId     String
+  teamName      String
+  title         String
+  description   String
+  stage         AiProjectStage @default(IDE)
+  proposalUrl   String?
+  repoUrl       String?
+  demoUrl       String?
+  videoUrl      String?
+  mentorFeedback String?
+  score         Int?
+  updatedAt     DateTime       @updatedAt
+  createdAt     DateTime       @default(now())
+
+  student       StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("INFO")
+  isRead    Boolean  @default(false)
+  linkUrl   String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   String?
+  details    String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model SystemConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model Announcement {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  category    String   @default("PENGUMUMAN")
+  fileUrl     String?
+  fileName    String?
+  isPinned    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  authorId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
