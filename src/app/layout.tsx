@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import './globals.css';
 import Navbar from '@/components/layout/Navbar';
 import BottomNav from '@/components/layout/BottomNav';
-import RoleSwitcher from '@/components/layout/RoleSwitcher';
 
 export const metadata: Metadata = {
   title: 'Digital Student Passport — MASTAMA UMLA 2026',
@@ -29,7 +28,6 @@ export default function RootLayout({
         <Navbar />
         <main className="flex-1 pb-20 md:pb-10">{children}</main>
         <BottomNav />
-        <RoleSwitcher />
       </body>
     </html>
   );

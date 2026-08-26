@@ -139,15 +139,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Demo Fast Access Link */}
-        <div className="mt-12 text-center">
-          <p className="text-xs text-gray-400">
-            Ingin langsung mencoba tanpa mendaftar?{' '}
-            <Link href="/login" className="text-umla-gold font-bold underline hover:text-yellow-300">
-              Gunakan Akun Demo (Student / Mentor / Admin)
-            </Link>
-          </p>
-        </div>
+
       </div>
     </div>
   );

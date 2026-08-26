@@ -16,12 +16,15 @@ import {
   HelpCircle,
   CheckCircle2,
   X,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,11 +66,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickLogin = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
   };
 
   const handleForgotSubmit = (e: React.FormEvent) => {
@@ -141,14 +139,21 @@ export default function LoginPage() {
             </div>
             <div className="relative">
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full pl-9 pr-3.5 py-2.5 rounded-xl text-xs glass-input"
+                className="w-full pl-9 pr-10 py-2.5 rounded-xl text-xs glass-input"
               />
               <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3 text-gray-400 hover:text-white transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
@@ -160,45 +165,6 @@ export default function LoginPage() {
             {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Masuk ke Dashboard'}
           </button>
         </form>
-
-        {/* 1-Click Demo Accounts */}
-        <div className="mt-8 pt-6 border-t border-white/10">
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2.5 text-center">
-            Pilihan Akun Demo (1-Click Fill):
-          </p>
-
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('student@umla.ac.id', 'Student123!')}
-              className="p-2 rounded-xl bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-center transition-all group"
-            >
-              <GraduationCap className="w-4 h-4 text-emerald-400 mx-auto mb-1 group-hover:scale-110 transition-transform" />
-              <p className="text-[10px] font-bold text-white">Student</p>
-              <p className="text-[8px] text-gray-400">Ahmad Fauzan</p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('mentor1@umla.ac.id', 'Admin123!')}
-              className="p-2 rounded-xl bg-white/5 hover:bg-blue-500/20 border border-white/10 hover:border-blue-500/40 text-center transition-all group"
-            >
-              <Users className="w-4 h-4 text-blue-400 mx-auto mb-1 group-hover:scale-110 transition-transform" />
-              <p className="text-[10px] font-bold text-white">Mentor</p>
-              <p className="text-[8px] text-gray-400">Budi Santoso</p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('admin@umla.ac.id', 'Admin123!')}
-              className="p-2 rounded-xl bg-white/5 hover:bg-purple-500/20 border border-white/10 hover:border-purple-500/40 text-center transition-all group"
-            >
-              <Shield className="w-4 h-4 text-purple-400 mx-auto mb-1 group-hover:scale-110 transition-transform" />
-              <p className="text-[10px] font-bold text-white">Admin</p>
-              <p className="text-[8px] text-gray-400">Master Panel</p>
-            </button>
-          </div>
-        </div>
 
         <p className="text-center text-xs text-gray-400 mt-6">
           Belum memiliki passport?{' '}
