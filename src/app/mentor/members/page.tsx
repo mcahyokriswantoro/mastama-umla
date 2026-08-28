@@ -5,19 +5,16 @@ import Link from 'next/link';
 import {
   Users,
   Search,
-  Award,
-  Sparkles,
   Phone,
-  Mail,
-  CheckCircle2,
-  ChevronRight,
-  RefreshCw,
+  UserMinus,
+  Loader2,
 } from 'lucide-react';
 
 export default function MentorMembersPage() {
   const [groupData, setGroupData] = useState<any | null>(null);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchMembers();
@@ -33,6 +30,34 @@ export default function MentorMembersPage() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRemoveMember = async (studentId: string, studentName: string) => {
+    if (!window.confirm(`Apakah Anda yakin ingin mengeluarkan ${studentName} dari kelompok ini?\n\nCATATAN: Akun mahasiswa ini akan dihapus agar mereka bisa mendaftar ulang dan memilih kelompok yang benar.`)) {
+      return;
+    }
+
+    try {
+      setRemovingId(studentId);
+      const res = await fetch('/api/mentor/remove-member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        alert('Mahasiswa berhasil dikeluarkan. Akun telah dihapus sehingga mahasiswa dapat mendaftar ulang.');
+        fetchMembers(); // refresh
+      } else {
+        alert(data.error || 'Gagal mengeluarkan mahasiswa.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Terjadi kesalahan.');
+    } finally {
+      setRemovingId(null);
     }
   };
 
@@ -75,63 +100,77 @@ export default function MentorMembersPage() {
       </div>
 
       {/* Members Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((m: any) => (
-          <div
-            key={m.id}
-            className="p-5 rounded-3xl glass-panel bg-umla-navy-950 border border-umla-gold/30 flex flex-col justify-between space-y-4 hover:border-umla-gold/60 transition-all shadow-xl"
-          >
-            <div className="flex items-start gap-3">
-              <img
-                src={m.avatarUrl}
-                alt={m.fullName}
-                className="w-12 h-12 rounded-2xl object-cover border-2 border-umla-gold/40 shrink-0"
-              />
-              <div className="overflow-hidden">
-                <h3 className="text-sm font-black text-white truncate">{m.fullName}</h3>
-                <p className="font-mono text-xs font-bold text-umla-gold">{m.nim}</p>
-                <p className="text-[11px] text-gray-300 truncate mt-0.5">{m.studyProgram}</p>
+      {loading && members.length === 0 ? (
+        <div className="flex justify-center py-12">
+           <Loader2 className="w-8 h-8 animate-spin text-umla-gold" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map((m: any) => (
+            <div
+              key={m.id}
+              className="p-5 rounded-3xl glass-panel bg-umla-navy-950 border border-umla-gold/30 flex flex-col justify-between space-y-4 hover:border-umla-gold/60 transition-all shadow-xl relative overflow-hidden"
+            >
+              <div className="flex items-start gap-3">
+                <img
+                  src={m.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.fullName)}&background=random`}
+                  alt={m.fullName}
+                  className="w-12 h-12 rounded-2xl object-cover border-2 border-umla-gold/40 shrink-0 bg-white"
+                />
+                <div className="overflow-hidden flex-1">
+                  <h3 className="text-sm font-black text-white truncate pr-6">{m.fullName}</h3>
+                  <p className="font-mono text-xs font-bold text-umla-gold">{m.nim}</p>
+                  <p className="text-[11px] text-gray-300 truncate mt-0.5">{m.studyProgram}</p>
+                </div>
               </div>
-            </div>
 
-            {/* Stats row */}
-            <div className="grid grid-cols-3 gap-2 p-2.5 rounded-2xl bg-white/5 border border-white/5 text-center">
-              <div>
-                <span className="text-[9px] text-gray-400 font-bold uppercase block">XP</span>
-                <span className="text-xs font-black text-emerald-400">{m.totalXp}</span>
+              {/* Stats row */}
+              <div className="grid grid-cols-3 gap-2 p-2.5 rounded-2xl bg-white/5 border border-white/5 text-center">
+                <div>
+                  <span className="text-[9px] text-gray-400 font-bold uppercase block">XP</span>
+                  <span className="text-xs font-black text-emerald-400">{m.totalXp}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-gray-400 font-bold uppercase block">Progress</span>
+                  <span className="text-xs font-black text-umla-gold">{m.progressPercent}%</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-gray-400 font-bold uppercase block">Badges</span>
+                  <span className="text-xs font-black text-blue-400">{m.badgesCount}</span>
+                </div>
               </div>
-              <div>
-                <span className="text-[9px] text-gray-400 font-bold uppercase block">Progress</span>
-                <span className="text-xs font-black text-umla-gold">{m.progressPercent}%</span>
-              </div>
-              <div>
-                <span className="text-[9px] text-gray-400 font-bold uppercase block">Badges</span>
-                <span className="text-xs font-black text-blue-400">{m.badgesCount}</span>
-              </div>
-            </div>
 
-            <div className="flex items-center gap-2 pt-1">
-              {m.phone && (
-                <a
-                  href={`https://wa.me/${m.phone.replace(/[^0-9]/g, '')}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex-1 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all"
+              <div className="flex items-center gap-2 pt-1">
+                {m.phone && (
+                  <a
+                    href={`https://wa.me/${m.phone.replace(/[^0-9]/g, '')}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    WhatsApp
+                  </a>
+                )}
+                
+                <button
+                  onClick={() => handleRemoveMember(m.id, m.fullName)}
+                  disabled={removingId === m.id}
+                  className="flex-1 py-2 rounded-xl bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-400 font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all disabled:opacity-50"
+                  title="Tolak/Keluarkan dari kelompok"
                 >
-                  <Phone className="w-3.5 h-3.5" />
-                  WhatsApp
-                </a>
-              )}
-              <Link
-                href="/mentor/approvals"
-                className="flex-1 py-2 rounded-xl bg-umla-gold text-umla-navy-950 font-black text-[11px] uppercase tracking-wider flex items-center justify-center gap-1 shadow-md hover:bg-yellow-400 transition-all"
-              >
-                Approval
-              </Link>
+                  {removingId === m.id ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <UserMinus className="w-3.5 h-3.5" />
+                  )}
+                  Tolak
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

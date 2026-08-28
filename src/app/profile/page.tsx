@@ -27,6 +27,9 @@ export default function ProfilePage() {
   const [bio, setBio] = useState('');
   const [phone, setPhone] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [facultyId, setFacultyId] = useState('');
+  const [studyProgramId, setStudyProgramId] = useState('');
+  const [faculties, setFaculties] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -51,7 +54,18 @@ export default function ProfilePage() {
 
   useEffect(() => {
     fetchUserData();
+    fetchAcademicData();
   }, []);
+
+  const fetchAcademicData = async () => {
+    try {
+      const res = await fetch('/api/academic/faculties');
+      const data = await res.json();
+      setFaculties(data.faculties || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchUserData = async () => {
     try {
@@ -63,7 +77,14 @@ export default function ProfilePage() {
         setPhone(data.user.phoneNumber || '');
         setAvatarUrl(data.user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`);
         setPreviewAvatar(data.user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`);
-        setBio('Calon Inovator & Pemimpin Masa Depan UMLA 2026! Siap menjelajah!');
+        
+        if (data.user.studentProfile) {
+          setBio(data.user.studentProfile.bio || 'Calon Inovator & Pemimpin Masa Depan UMLA 2026! Siap menjelajah!');
+          setFacultyId(data.user.studentProfile.facultyId || '');
+          setStudyProgramId(data.user.studentProfile.studyProgramId || '');
+        } else {
+          setBio('Calon Inovator & Pemimpin Masa Depan UMLA 2026! Siap menjelajah!');
+        }
       }
     } catch (err) {
       console.error(err);
@@ -105,6 +126,8 @@ export default function ProfilePage() {
           avatarUrl,
           phoneNumber: phone,
           bio,
+          facultyId,
+          studyProgramId,
         }),
       });
 
@@ -214,16 +237,38 @@ export default function ProfilePage() {
 
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Fakultas</label>
-                <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-white">
-                  {profile?.faculty.name || 'Fakultas Sains, Teknologi dan Pendidikan'}
-                </div>
+                <select
+                  value={facultyId}
+                  onChange={(e) => {
+                    setFacultyId(e.target.value);
+                    setStudyProgramId('');
+                  }}
+                  className="w-full px-3 py-2.5 rounded-xl text-xs glass-input font-semibold text-white"
+                >
+                  <option value="" disabled className="text-black">Pilih Fakultas</option>
+                  {faculties.map((f: any) => (
+                    <option key={f.id} value={f.id} className="text-black">{f.name}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Program Studi</label>
-                <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-white">
-                  {profile?.studyProgram.name || 'Informatika (S1)'}
-                </div>
+                <select
+                  value={studyProgramId}
+                  onChange={(e) => setStudyProgramId(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl text-xs glass-input font-semibold text-white"
+                  disabled={!facultyId}
+                >
+                  <option value="" disabled className="text-black">Pilih Program Studi</option>
+                  {faculties
+                    .find((f: any) => f.id === facultyId)
+                    ?.studyPrograms.map((sp: any) => (
+                      <option key={sp.id} value={sp.id} className="text-black">
+                        {sp.name} ({sp.degree})
+                      </option>
+                    ))}
+                </select>
               </div>
 
               <div>

@@ -75,7 +75,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Tidak terautentikasi.' }, { status: 401 });
     }
 
-    const { avatarUrl, phoneNumber, bio, fullName } = await request.json();
+    const { avatarUrl, phoneNumber, bio, fullName, facultyId, studyProgramId } = await request.json();
 
     // Update user
     const updatedUser = await prisma.user.update({
@@ -87,11 +87,16 @@ export async function PUT(request: Request) {
       },
     });
 
-    // Update studentProfile bio if student
-    if (user.studentProfile && bio !== undefined) {
+    // Update studentProfile bio, faculty, and studyProgram if student
+    if (user.studentProfile && (bio !== undefined || facultyId || studyProgramId)) {
+      const dataToUpdate: any = {};
+      if (bio !== undefined) dataToUpdate.bio = bio;
+      if (facultyId) dataToUpdate.facultyId = facultyId;
+      if (studyProgramId) dataToUpdate.studyProgramId = studyProgramId;
+
       await prisma.studentProfile.update({
         where: { id: user.studentProfile.id },
-        data: { bio },
+        data: dataToUpdate,
       });
     }
 
