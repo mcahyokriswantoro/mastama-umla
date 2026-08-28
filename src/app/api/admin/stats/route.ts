@@ -65,8 +65,31 @@ export async function GET() {
       students: f._count.students,
     }));
 
+    // Study Program breakdown
+    const studyPrograms = await prisma.studyProgram.findMany({
+      include: { _count: { select: { students: true } } },
+      orderBy: { students: { _count: 'desc' } },
+    });
+    
+    const prodiChartData = studyPrograms.map((p) => ({
+      name: p.code,
+      fullName: p.name,
+      students: p._count.students,
+    }));
+
+    // Top 10 Students by XP
+    const topStudents = await prisma.studentProfile.findMany({
+      take: 10,
+      orderBy: { totalXp: 'desc' },
+      include: {
+        user: { select: { fullName: true, email: true, avatarUrl: true } },
+        studyProgram: { select: { name: true, code: true } },
+        group: { select: { name: true } },
+      },
+    });
+
     // Group capacity distribution
-    const groupDistribution = groups.slice(0, 15).map((g) => ({
+    const groupDistribution = groups.map((g) => ({
       name: `Klp ${g.number < 10 ? '0' + g.number : g.number}`,
       members: g._count.students,
       capacity: g.capacity,
@@ -87,6 +110,8 @@ export async function GET() {
           : 0,
       },
       facultyChartData,
+      prodiChartData,
+      topStudents,
       groupDistribution,
       allGroups: groups.map((g) => ({
         id: g.id,

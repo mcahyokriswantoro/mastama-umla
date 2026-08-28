@@ -8,6 +8,8 @@ import {
   Phone,
   UserMinus,
   Loader2,
+  Lock,
+  X,
 } from 'lucide-react';
 
 export default function MentorMembersPage() {
@@ -15,6 +17,11 @@ export default function MentorMembersPage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  
+  // Reset Password State
+  const [resettingStudent, setResettingStudent] = useState<any | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
 
   useEffect(() => {
     fetchMembers();
@@ -58,6 +65,42 @@ export default function MentorMembersPage() {
       alert('Terjadi kesalahan.');
     } finally {
       setRemovingId(null);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resettingStudent || !newPassword) return;
+
+    if (newPassword.length < 6) {
+      alert('Password baru minimal 6 karakter.');
+      return;
+    }
+
+    try {
+      setResetLoading(true);
+      const res = await fetch('/api/mentor/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          studentId: resettingStudent.id, 
+          newPassword 
+        }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(data.message || 'Password berhasil direset!');
+        setResettingStudent(null);
+        setNewPassword('');
+      } else {
+        alert(data.error || 'Gagal mereset password.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Terjadi kesalahan.');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -154,6 +197,15 @@ export default function MentorMembersPage() {
                 )}
                 
                 <button
+                  onClick={() => setResettingStudent(m)}
+                  className="flex-1 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-400 font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all"
+                  title="Reset Password Mahasiswa"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  Reset PSS
+                </button>
+                
+                <button
                   onClick={() => handleRemoveMember(m.id, m.fullName)}
                   disabled={removingId === m.id}
                   className="flex-1 py-2 rounded-xl bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-400 font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all disabled:opacity-50"
@@ -169,6 +221,58 @@ export default function MentorMembersPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Reset Password Modal */}
+      {resettingStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
+          <div className="relative w-full max-w-sm glass-panel bg-umla-navy-950 rounded-3xl p-6 border-2 border-blue-500/40 shadow-2xl space-y-4 text-center">
+            <button onClick={() => setResettingStudent(null)} className="absolute top-4 right-4 text-gray-400 hover:text-white p-1 rounded-full hover:bg-white/10">
+              <X className="w-5 h-5" />
+            </button>
+            <div className="w-14 h-14 mx-auto bg-blue-500/20 rounded-full flex items-center justify-center text-blue-400 mb-2">
+              <Lock className="w-7 h-7" />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-white">Reset Password</h3>
+              <p className="text-xs text-gray-300 mt-2">
+                Masukkan password baru untuk mahasiswa <br/><span className="font-bold text-white text-sm">{resettingStudent.fullName}</span>
+              </p>
+            </div>
+            
+            <form onSubmit={handleResetPassword} className="space-y-4 pt-2">
+              <div className="text-left">
+                <label className="block text-[10px] font-bold text-gray-300 uppercase mb-1">Password Baru</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Minimal 6 karakter"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl text-sm glass-input font-mono text-center"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setResettingStudent(null)}
+                  className="flex-1 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={resetLoading}
+                  className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors flex justify-center items-center gap-2"
+                >
+                  {resetLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+                  Simpan PSS
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

@@ -16,6 +16,7 @@ import {
   RefreshCw,
   FileSpreadsheet,
   Megaphone,
+  Trophy,
 } from 'lucide-react';
 import {
   BarChart,
@@ -182,6 +183,65 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ROW 2: Leaderboard & Prodi Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Top 10 Leaderboard */}
+        <div className="lg:col-span-7 p-6 rounded-3xl glass-panel bg-umla-navy-950 border border-umla-gold/30">
+          <div className="flex items-center gap-2 mb-1">
+            <Trophy className="w-5 h-5 text-yellow-400" />
+            <h3 className="text-sm font-black text-white">Top 10 Mahasiswa Terbaik (Total XP)</h3>
+          </div>
+          <p className="text-xs text-gray-400 mb-6">Peringkat mahasiswa yang paling cepat dan banyak menyelesaikan aktivitas.</p>
+
+          <div className="space-y-3">
+            {statsData.topStudents?.length === 0 ? (
+              <p className="text-xs text-gray-500 text-center py-4">Belum ada data mahasiswa.</p>
+            ) : (
+              statsData.topStudents?.map((st: any, idx: number) => (
+                <div key={st.id} className="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-white/5 hover:border-umla-gold/30 transition-colors">
+                  <div className="w-8 h-8 shrink-0 rounded-full bg-umla-gold/20 flex items-center justify-center font-black text-umla-gold text-xs border border-umla-gold/30">
+                    #{idx + 1}
+                  </div>
+                  <img
+                    src={st.user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${st.user.email}`}
+                    alt="avatar"
+                    className="w-10 h-10 rounded-xl object-cover shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-white truncate">{st.user.fullName}</p>
+                    <p className="text-[10px] text-gray-400 truncate">
+                      {st.studyProgram.name} • {st.group?.name || 'Belum Ada Kelompok'}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-black text-emerald-400">{st.totalXp} XP</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Prodi Distribution Bar Chart */}
+        <div className="lg:col-span-5 p-6 rounded-3xl glass-panel bg-umla-navy-950 border border-umla-gold/30">
+          <h3 className="text-sm font-black text-white mb-1">Distribusi per Program Studi</h3>
+          <p className="text-xs text-gray-400 mb-6">Sebaran mahasiswa baru berdasarkan prodi</p>
+
+          <div className="h-[400px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={statsData.prodiChartData} layout="vertical" margin={{ left: -20 }}>
+                <XAxis type="number" stroke="#94A3B8" fontSize={10} />
+                <YAxis dataKey="name" type="category" stroke="#94A3B8" fontSize={10} width={80} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#09142A', borderColor: '#D4AF37', borderRadius: '12px', fontSize: '11px' }}
+                />
+                <Bar dataKey="students" fill="#3B82F6" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>

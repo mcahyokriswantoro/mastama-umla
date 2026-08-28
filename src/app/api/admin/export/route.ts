@@ -104,17 +104,99 @@ export async function GET() {
     }
 
     const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'MASTAMA UMLA 2026';
+    workbook.lastModifiedBy = 'Admin';
+    workbook.created = new Date();
+    workbook.modified = new Date();
     
-    const recapSheet = workbook.addWorksheet('Rekap Passport');
+    // ==========================================
+    // 1. STYLE REKAP SHEET
+    // ==========================================
+    const recapSheet = workbook.addWorksheet('Rekap Passport', {
+      views: [{ state: 'frozen', ySplit: 1 }] // Freeze header row
+    });
+    
     if (passportRecapData.length > 0) {
-      recapSheet.columns = Object.keys(passportRecapData[0]).map(key => ({ header: key, key: key }));
+      const headers = Object.keys(passportRecapData[0]);
+      recapSheet.columns = headers.map(key => ({ 
+        header: key, 
+        key: key, 
+        width: key === 'No' ? 5 : key === 'Nama Lengkap' ? 30 : key === 'Kelompok' ? 15 : key.includes('Program') ? 25 : 18 
+      }));
       recapSheet.addRows(passportRecapData);
+
+      // Header Styling
+      const headerRow = recapSheet.getRow(1);
+      headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11, name: 'Calibri' };
+      headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } }; // Navy Blue
+      headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+      headerRow.height = 30;
+
+      // Row & Cell Styling
+      recapSheet.eachRow((row, rowNumber) => {
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          // Borders
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+          };
+          
+          // Data Rows Formatting
+          if (rowNumber > 1) {
+            cell.font = { size: 10, name: 'Calibri' };
+            cell.alignment = { vertical: 'middle', horizontal: colNumber === 1 || cell.value === 'LULUS' || cell.value === 'BELUM' ? 'center' : 'left' };
+            
+            // Color code LULUS/BELUM
+            if (cell.value === 'LULUS') {
+              cell.font = { ...cell.font, color: { argb: 'FF059669' }, bold: true }; // Green
+            } else if (cell.value === 'BELUM') {
+              cell.font = { ...cell.font, color: { argb: 'FFDC2626' } }; // Red
+            }
+          }
+        });
+      });
     }
 
-    const detailSheet = workbook.addWorksheet('Detail Submissions');
+    // ==========================================
+    // 2. STYLE DETAIL SHEET
+    // ==========================================
+    const detailSheet = workbook.addWorksheet('Detail Submissions', {
+      views: [{ state: 'frozen', ySplit: 1 }]
+    });
+
     if (detailedSubmissionsData.length > 0) {
-      detailSheet.columns = Object.keys(detailedSubmissionsData[0]).map(key => ({ header: key, key: key }));
+      const headers = Object.keys(detailedSubmissionsData[0]);
+      detailSheet.columns = headers.map(key => ({ 
+        header: key, 
+        key: key, 
+        width: key === 'Nama Mahasiswa' || key === 'Nama Kegiatan' ? 30 : key === 'Catatan Feedback' ? 40 : 15 
+      }));
       detailSheet.addRows(detailedSubmissionsData);
+
+      // Header Styling
+      const headerRow2 = detailSheet.getRow(1);
+      headerRow2.font = { bold: true, color: { argb: 'FF000000' }, size: 11, name: 'Calibri' };
+      headerRow2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF59E0B' } }; // UMLA Gold
+      headerRow2.alignment = { vertical: 'middle', horizontal: 'center' };
+      headerRow2.height = 30;
+
+      // Row & Cell Styling
+      detailSheet.eachRow((row, rowNumber) => {
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+          };
+          if (rowNumber > 1) {
+            cell.font = { size: 10, name: 'Calibri' };
+            cell.alignment = { vertical: 'middle', wrapText: true };
+          }
+        });
+      });
     }
 
     const buffer = await workbook.xlsx.writeBuffer();

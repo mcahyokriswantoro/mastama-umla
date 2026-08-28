@@ -68,6 +68,7 @@ async function main() {
   const prodis = [
     // FIKES
     { code: 'D3_FIS', name: 'Fisioterapi (D3)', degree: 'D3', facultyId: fikes.id },
+    { code: 'S1_FIS', name: 'Fisioterapi (S1)', degree: 'S1', facultyId: fikes.id },
     { code: 'D3_FAR', name: 'Farmasi (D3)', degree: 'D3', facultyId: fikes.id },
     { code: 'D3_KEB', name: 'Kebidanan (D3)', degree: 'D3', facultyId: fikes.id },
     { code: 'S1_KEP', name: 'Keperawatan (S1)', degree: 'S1', facultyId: fikes.id },

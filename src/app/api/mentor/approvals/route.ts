@@ -30,7 +30,7 @@ export async function GET() {
 
     // 1. Regular Activity Submissions
     const submissions = await prisma.activitySubmission.findMany({
-      where: { student: studentFilter },
+      where: { student: studentFilter, status: { in: ['SUBMITTED', 'UNDER_REVIEW'] } },
       include: {
         activity: {
           include: {
@@ -64,115 +64,138 @@ export async function GET() {
       orderBy: { submittedAt: 'desc' },
     });
 
+    const historySubmissionsRaw = await prisma.activitySubmission.findMany({
+      where: { student: studentFilter, status: { in: ['COMPLETED', 'REJECTED', 'APPROVED'] } },
+      include: {
+        activity: {
+          include: {
+            journey: true,
+          },
+        },
+        student: {
+          include: {
+            user: { select: { fullName: true, email: true, avatarUrl: true, phoneNumber: true } },
+            group: true,
+            faculty: true,
+            studyProgram: true,
+          },
+        },
+        approvals: {
+          include: { reviewer: { select: { fullName: true, role: true } } },
+          orderBy: { reviewedAt: 'desc' },
+        },
+      },
+      orderBy: { submittedAt: 'desc' },
+      take: 20,
+    });
+
     // 2. Spiritual Dzuhur Submissions
     const spiritualSubmissions = await prisma.spiritualParticipation.findMany({
       where: {
         student: studentFilter,
+        status: { in: ['SUBMITTED', 'UNDER_REVIEW'] }
       },
       include: {
         student: {
           include: {
-            user: {
-              select: {
-                fullName: true,
-                email: true,
-                avatarUrl: true,
-                phoneNumber: true,
-              },
-            },
-            group: true,
-            faculty: true,
-            studyProgram: true,
+            user: { select: { fullName: true, email: true, avatarUrl: true, phoneNumber: true } },
+            group: true, faculty: true, studyProgram: true,
           },
         },
       },
       orderBy: { updatedAt: 'desc' },
     });
 
-    // Format Spiritual into unified review format
-    const formattedSpiritual = spiritualSubmissions.map((sp) => ({
-      id: sp.id,
-      type: 'SPIRITUAL',
-      title: `Sholat Dzuhur Berjamaah #${sp.slotIndex < 10 ? '0' + sp.slotIndex : sp.slotIndex}`,
-      category: '24× Dzuhur Berjamaah',
-      slotIndex: sp.slotIndex,
-      student: sp.student,
-      submittedAt: sp.updatedAt || sp.createdAt,
-      status: sp.status,
-      evidencePhoto: sp.evidencePhoto,
-      description: `Presensi sholat dzuhur di ${sp.location}`,
-      xpReward: 25,
-      locationNote: sp.location,
-      feedback: sp.rejectionNote,
-    }));
+    const historySpiritualRaw = await prisma.spiritualParticipation.findMany({
+      where: {
+        student: studentFilter,
+        status: { in: ['COMPLETED', 'REJECTED', 'APPROVED'] }
+      },
+      include: {
+        student: {
+          include: {
+            user: { select: { fullName: true, email: true, avatarUrl: true, phoneNumber: true } },
+            group: true, faculty: true, studyProgram: true,
+          },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 20,
+    });
+
+
 
     // 3. ORMAWA Submissions
     const ormawaSubmissions = await prisma.ormawaParticipation.findMany({
       where: {
         student: studentFilter,
+        status: { in: ['SUBMITTED', 'UNDER_REVIEW'] }
       },
       include: {
         student: {
           include: {
-            user: {
-              select: {
-                fullName: true,
-                email: true,
-                avatarUrl: true,
-                phoneNumber: true,
-              },
-            },
-            group: true,
-            faculty: true,
-            studyProgram: true,
+            user: { select: { fullName: true, email: true, avatarUrl: true, phoneNumber: true } },
+            group: true, faculty: true, studyProgram: true,
           },
         },
       },
       orderBy: { updatedAt: 'desc' },
     });
 
-    const formattedOrmawa = ormawaSubmissions.map((op) => ({
-      id: op.id,
-      type: 'ORMAWA',
-      title: `ORMAWA #${op.activityIndex}: ${op.title}`,
-      category: '15× ORMAWA Explorer',
-      activityIndex: op.activityIndex,
-      student: op.student,
-      submittedAt: op.updatedAt || op.createdAt,
-      status: op.status,
-      evidencePhoto: op.evidencePhoto,
-      description: `${op.ormawaName} — ${op.description}`,
-      xpReward: 50,
-      feedback: op.rejectionNote,
-    }));
+    const historyOrmawaRaw = await prisma.ormawaParticipation.findMany({
+      where: {
+        student: studentFilter,
+        status: { in: ['COMPLETED', 'REJECTED', 'APPROVED'] }
+      },
+      include: {
+        student: {
+          include: {
+            user: { select: { fullName: true, email: true, avatarUrl: true, phoneNumber: true } },
+            group: true, faculty: true, studyProgram: true,
+          },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 20,
+    });
+
+
 
     // 4. AI Challenge Submissions
     const aiSubmissions = await prisma.aiProject.findMany({
       where: {
         student: studentFilter,
-        stage: { in: ['LAPORAN', 'COMPLETED'] },
+        stage: 'LAPORAN',
       },
       include: {
         student: {
           include: {
-            user: {
-              select: {
-                fullName: true,
-                email: true,
-                avatarUrl: true,
-                phoneNumber: true,
-              },
-            },
-            group: true,
-            faculty: true,
-            studyProgram: true,
+            user: { select: { fullName: true, email: true, avatarUrl: true, phoneNumber: true } },
+            group: true, faculty: true, studyProgram: true,
           },
         },
       },
       orderBy: { updatedAt: 'desc' },
     });
 
-    const formattedAi = aiSubmissions.map((ai) => ({
+    const historyAiRaw = await prisma.aiProject.findMany({
+      where: {
+        student: studentFilter,
+        stage: 'COMPLETED',
+      },
+      include: {
+        student: {
+          include: {
+            user: { select: { fullName: true, email: true, avatarUrl: true, phoneNumber: true } },
+            group: true, faculty: true, studyProgram: true,
+          },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 20,
+    });
+
+    const formattedAi = [...aiSubmissions, ...historyAiRaw].map((ai) => ({
       id: ai.id,
       type: 'AI_PROJECT',
       title: `AI Challenge: ${ai.title}`,
@@ -190,7 +213,7 @@ export async function GET() {
       feedback: ai.mentorFeedback,
     }));
 
-    const formattedMastama = submissions.map((s) => ({
+    const formattedMastama = [...submissions, ...historySubmissionsRaw].map((s) => ({
       id: s.id,
       type: 'MASTAMA',
       title: s.activity.title,
@@ -204,6 +227,37 @@ export async function GET() {
       locationNote: s.locationNote,
       feedback: s.approvals?.[0]?.feedback || null,
       reviewer: s.approvals?.[0]?.reviewer || null,
+    }));
+
+    const formattedSpiritual = [...spiritualSubmissions, ...historySpiritualRaw].map((sp) => ({
+      id: sp.id,
+      type: 'SPIRITUAL',
+      title: `Sholat Dzuhur Berjamaah #${sp.slotIndex < 10 ? '0' + sp.slotIndex : sp.slotIndex}`,
+      category: '24× Dzuhur Berjamaah',
+      slotIndex: sp.slotIndex,
+      student: sp.student,
+      submittedAt: sp.updatedAt || sp.createdAt,
+      status: sp.status,
+      evidencePhoto: sp.evidencePhoto,
+      description: `Presensi sholat dzuhur di ${sp.location}`,
+      xpReward: 25,
+      locationNote: sp.location,
+      feedback: sp.rejectionNote,
+    }));
+
+    const formattedOrmawa = [...ormawaSubmissions, ...historyOrmawaRaw].map((op) => ({
+      id: op.id,
+      type: 'ORMAWA',
+      title: `ORMAWA #${op.activityIndex}: ${op.title}`,
+      category: '15× ORMAWA Explorer',
+      activityIndex: op.activityIndex,
+      student: op.student,
+      submittedAt: op.updatedAt || op.createdAt,
+      status: op.status,
+      evidencePhoto: op.evidencePhoto,
+      description: `${op.ormawaName} — ${op.description}`,
+      xpReward: 50,
+      feedback: op.rejectionNote,
     }));
 
     const allSubmissions = [...formattedMastama, ...formattedSpiritual, ...formattedOrmawa, ...formattedAi].sort(

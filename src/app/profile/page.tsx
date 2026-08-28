@@ -243,11 +243,11 @@ export default function ProfilePage() {
                     setFacultyId(e.target.value);
                     setStudyProgramId('');
                   }}
-                  className="w-full px-3 py-2.5 rounded-xl text-xs glass-input font-semibold text-white"
+                  className="w-full px-3 py-2.5 rounded-xl text-xs glass-input font-semibold text-white bg-umla-navy-950"
                 >
-                  <option value="" disabled className="text-black">Pilih Fakultas</option>
+                  <option value="" disabled>Pilih Fakultas</option>
                   {faculties.map((f: any) => (
-                    <option key={f.id} value={f.id} className="text-black">{f.name}</option>
+                    <option key={f.id} value={f.id} className="bg-umla-navy-900">{f.name}</option>
                   ))}
                 </select>
               </div>
@@ -257,14 +257,14 @@ export default function ProfilePage() {
                 <select
                   value={studyProgramId}
                   onChange={(e) => setStudyProgramId(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl text-xs glass-input font-semibold text-white"
+                  className="w-full px-3 py-2.5 rounded-xl text-xs glass-input font-semibold text-white bg-umla-navy-950"
                   disabled={!facultyId}
                 >
-                  <option value="" disabled className="text-black">Pilih Program Studi</option>
+                  <option value="" disabled>Pilih Program Studi</option>
                   {faculties
                     .find((f: any) => f.id === facultyId)
                     ?.studyPrograms.map((sp: any) => (
-                      <option key={sp.id} value={sp.id} className="text-black">
+                      <option key={sp.id} value={sp.id} className="bg-umla-navy-900">
                         {sp.name} ({sp.degree})
                       </option>
                     ))}

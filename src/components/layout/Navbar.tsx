@@ -179,6 +179,14 @@ export default function Navbar() {
                 40 Kelompok
               </Link>
               <Link
+                href="/admin/students"
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  pathname === '/admin/students' ? 'bg-umla-gold/20 text-umla-gold border border-umla-gold/40' : 'text-gray-300 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                Mahasiswa
+              </Link>
+              <Link
                 href="/admin/activities"
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   pathname === '/admin/activities' ? 'bg-umla-gold/20 text-umla-gold border border-umla-gold/40' : 'text-gray-300 hover:text-white hover:bg-white/5'
@@ -440,6 +448,15 @@ export default function Navbar() {
                   }`}
                 >
                   40 Kelompok
+                </Link>
+                <Link
+                  href="/admin/students"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    pathname === '/admin/students' ? 'bg-umla-gold/20 text-umla-gold border border-umla-gold/40' : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  Mahasiswa
                 </Link>
                 <Link
                   href="/admin/activities"

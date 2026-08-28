@@ -173,17 +173,32 @@ export async function POST(request: Request) {
         },
       });
 
-      if (mentorIds && Array.isArray(mentorIds)) {
-        await prisma.groupMentorAssignment.deleteMany({
+      // Only update mentor assignments if mentorIds is explicitly provided in the request
+      if (mentorIds !== undefined && Array.isArray(mentorIds)) {
+        // Get current assignments to compare
+        const currentAssignments = await prisma.groupMentorAssignment.findMany({
           where: { groupId },
+          select: { mentorId: true },
         });
+        const currentMentorIds = currentAssignments.map(a => a.mentorId);
 
-        for (const mId of mentorIds) {
-          await prisma.groupMentorAssignment.create({
-            data: {
-              groupId,
-              mentorId: mId,
-            },
+        // Find mentors to add and remove
+        const toAdd = mentorIds.filter((id: string) => !currentMentorIds.includes(id));
+        const toRemove = currentMentorIds.filter(id => !mentorIds.includes(id));
+
+        // Remove unselected mentors
+        if (toRemove.length > 0) {
+          await prisma.groupMentorAssignment.deleteMany({
+            where: { groupId, mentorId: { in: toRemove } },
+          });
+        }
+
+        // Add newly selected mentors
+        for (const mId of toAdd) {
+          await prisma.groupMentorAssignment.upsert({
+            where: { groupId_mentorId: { groupId, mentorId: mId } },
+            create: { groupId, mentorId: mId },
+            update: {},
           });
         }
       }
@@ -201,6 +216,137 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         message: `Kelompok ${updated.name} dan penetapan pendamping berhasil diperbarui!`,
+      });
+    }
+
+    // 4. BULK ASSIGN MENTORS TO ALL GROUPS AT ONCE
+    if (action === 'BULK_ASSIGN_MENTORS') {
+      const { assignments } = body;
+      if (!assignments || !Array.isArray(assignments)) {
+        return NextResponse.json({ error: 'Data bulk assignment tidak valid.' }, { status: 400 });
+      }
+
+      // Use a transaction to ensure all-or-nothing
+      await prisma.$transaction(async (tx) => {
+        for (const assignment of assignments) {
+          const { groupId: gId, mentorId: mId } = assignment;
+          if (!gId) continue;
+
+          // Remove existing assignments for this group
+          await tx.groupMentorAssignment.deleteMany({
+            where: { groupId: gId },
+          });
+
+          // Add new mentor if specified
+          if (mId) {
+            await tx.groupMentorAssignment.create({
+              data: {
+                groupId: gId,
+                mentorId: mId,
+              },
+            });
+          }
+        }
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          userId: user.id,
+          action: 'BULK_ASSIGN_MENTORS',
+          entityType: 'GROUP',
+          details: `Admin melakukan bulk assignment pendamping untuk ${assignments.length} kelompok.`,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Berhasil menyimpan penetapan pendamping untuk ${assignments.length} kelompok sekaligus!`,
+      });
+    }
+    // 5. UPDATE MENTOR (edit email, password, name, phone)
+    if (action === 'UPDATE_MENTOR') {
+      const { mentorId, newFullName, newEmail, newPassword, newPhoneNumber } = body;
+      if (!mentorId) {
+        return NextResponse.json({ error: 'ID mentor tidak valid.' }, { status: 400 });
+      }
+
+      const mentor = await prisma.user.findUnique({ where: { id: mentorId } });
+      if (!mentor || mentor.role !== 'GROUP_MENTOR') {
+        return NextResponse.json({ error: 'Akun mentor tidak ditemukan.' }, { status: 404 });
+      }
+
+      const updateData: any = {};
+      if (newFullName) updateData.fullName = newFullName;
+      if (newEmail && newEmail !== mentor.email) {
+        const existing = await prisma.user.findUnique({ where: { email: newEmail } });
+        if (existing && existing.id !== mentorId) {
+          return NextResponse.json({ error: `Email "${newEmail}" sudah digunakan oleh akun lain.` }, { status: 400 });
+        }
+        updateData.email = newEmail;
+      }
+      if (newPassword) {
+        updateData.passwordHash = await bcrypt.hash(newPassword, 10);
+      }
+      if (newPhoneNumber !== undefined) {
+        updateData.phoneNumber = newPhoneNumber || null;
+      }
+
+      const updated = await prisma.user.update({
+        where: { id: mentorId },
+        data: updateData,
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          userId: user.id,
+          action: 'UPDATE_MENTOR',
+          entityType: 'USER',
+          entityId: mentorId,
+          details: `Admin mengupdate data pendamping: ${updated.fullName} (${updated.email})${newPassword ? ' [password direset]' : ''}`,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Data pendamping ${updated.fullName} berhasil diperbarui!${newPassword ? ' Password telah direset.' : ''}`,
+      });
+    }
+
+    // 6. DELETE MENTOR
+    if (action === 'DELETE_MENTOR') {
+      const { mentorId } = body;
+      if (!mentorId) {
+        return NextResponse.json({ error: 'ID mentor tidak valid.' }, { status: 400 });
+      }
+
+      const mentor = await prisma.user.findUnique({ where: { id: mentorId } });
+      if (!mentor || mentor.role !== 'GROUP_MENTOR') {
+        return NextResponse.json({ error: 'Akun mentor tidak ditemukan.' }, { status: 404 });
+      }
+
+      // Remove all group assignments first
+      await prisma.groupMentorAssignment.deleteMany({
+        where: { mentorId },
+      });
+
+      // Delete the user
+      await prisma.user.delete({
+        where: { id: mentorId },
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          userId: user.id,
+          action: 'DELETE_MENTOR',
+          entityType: 'USER',
+          entityId: mentorId,
+          details: `Admin menghapus akun pendamping: ${mentor.fullName} (${mentor.email})`,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Akun pendamping ${mentor.fullName} (${mentor.email}) berhasil dihapus!`,
       });
     }
 

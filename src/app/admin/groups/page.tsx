@@ -20,6 +20,7 @@ import {
   Check,
   Award,
   Sparkles,
+  Trash2,
 } from 'lucide-react';
 
 export default function AdminGroupsPage() {
@@ -28,7 +29,7 @@ export default function AdminGroupsPage() {
   const [mentors, setMentors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'GROUPS' | 'MENTORS'>('GROUPS');
+  const [activeTab, setActiveTab] = useState<'GROUPS' | 'MENTORS' | 'ASSIGN'>('GROUPS');
 
   // Edit group modal
   const [editingGroup, setEditingGroup] = useState<any | null>(null);
@@ -45,6 +46,18 @@ export default function AdminGroupsPage() {
 
   const [saving, setSaving] = useState(false);
   const [toastMsg, setToastMsg] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Bulk mentor assignment
+  const [bulkAssignments, setBulkAssignments] = useState<Record<string, string>>({});
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Edit/Delete mentor modal
+  const [editingMentor, setEditingMentor] = useState<any | null>(null);
+  const [editMentorName, setEditMentorName] = useState('');
+  const [editMentorEmail, setEditMentorEmail] = useState('');
+  const [editMentorPassword, setEditMentorPassword] = useState('');
+  const [editMentorPhone, setEditMentorPhone] = useState('');
+  const [deletingMentor, setDeletingMentor] = useState<any | null>(null);
 
   useEffect(() => {
     fetchGroups();
@@ -67,9 +80,117 @@ export default function AdminGroupsPage() {
     }
   };
 
+  const initBulkAssignments = () => {
+    const initial: Record<string, string> = {};
+    groups.forEach((g) => {
+      initial[g.id] = g.mentors?.[0]?.id || '';
+    });
+    setBulkAssignments(initial);
+    setHasUnsavedChanges(false);
+  };
+
+  const handleBulkSave = async () => {
+    setSaving(true);
+    try {
+      const assignments = Object.entries(bulkAssignments).map(([groupId, mentorId]) => ({
+        groupId,
+        mentorId: mentorId || null,
+      }));
+
+      const res = await fetch('/api/admin/groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'BULK_ASSIGN_MENTORS',
+          assignments,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showToast('success', data.message);
+        setHasUnsavedChanges(false);
+        await fetchGroups();
+      } else {
+        showToast('error', data.error || 'Gagal menyimpan perubahan.');
+      }
+    } catch (err: any) {
+      showToast('error', err.message || 'Terjadi kesalahan sistem.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const showToast = (type: 'success' | 'error', message: string) => {
     setToastMsg({ type, message });
     setTimeout(() => setToastMsg(null), 3500);
+  };
+
+  const handleOpenEditMentor = (m: any) => {
+    setEditingMentor(m);
+    setEditMentorName(m.fullName);
+    setEditMentorEmail(m.email);
+    setEditMentorPassword('');
+    setEditMentorPhone(m.phoneNumber || '');
+  };
+
+  const handleUpdateMentor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMentor) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'UPDATE_MENTOR',
+          mentorId: editingMentor.id,
+          newFullName: editMentorName,
+          newEmail: editMentorEmail,
+          newPassword: editMentorPassword || undefined,
+          newPhoneNumber: editMentorPhone,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEditingMentor(null);
+        showToast('success', data.message);
+        await fetchGroups();
+      } else {
+        showToast('error', data.error || 'Gagal memperbarui data.');
+      }
+    } catch (err: any) {
+      showToast('error', err.message || 'Terjadi kesalahan.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteMentor = async () => {
+    if (!deletingMentor) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'DELETE_MENTOR',
+          mentorId: deletingMentor.id,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDeletingMentor(null);
+        showToast('success', data.message);
+        await fetchGroups();
+      } else {
+        showToast('error', data.error || 'Gagal menghapus mentor.');
+      }
+    } catch (err: any) {
+      showToast('error', err.message || 'Terjadi kesalahan.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleToggleMode = async (newMode: string) => {
@@ -159,7 +280,10 @@ export default function AdminGroupsPage() {
         setMentorPassword('Admin123!');
         setMentorPhone('');
         showToast('success', data.message);
-        fetchGroups();
+        await fetchGroups();
+        if (editingGroup && data.mentor) {
+          setSelectedMentorIds(prev => [...prev, data.mentor.id]);
+        }
       } else {
         showToast('error', data.error || 'Gagal menambahkan pendamping.');
       }
@@ -296,6 +420,20 @@ export default function AdminGroupsPage() {
             <Award className="w-3.5 h-3.5" />
             Daftar Kakak Pendamping ({mentors.length})
           </button>
+          <button
+            onClick={() => {
+              setActiveTab('ASSIGN');
+              initBulkAssignments();
+            }}
+            className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'ASSIGN'
+                ? 'bg-emerald-500 text-white shadow'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Atur Pendamping Kelompok
+          </button>
         </div>
 
         {/* Search */}
@@ -403,6 +541,7 @@ export default function AdminGroupsPage() {
                   <th className="pb-3">No. WhatsApp / HP</th>
                   <th className="pb-3">Kelompok Didampingi</th>
                   <th className="pb-3 text-right">Role</th>
+                  <th className="pb-3 text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -437,10 +576,115 @@ export default function AdminGroupsPage() {
                         GROUP_MENTOR
                       </span>
                     </td>
+                    <td className="py-3.5 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => handleOpenEditMentor(m)}
+                          className="p-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 transition-colors"
+                          title="Edit Data & Reset Password"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setDeletingMentor(m)}
+                          className="p-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 transition-colors"
+                          title="Hapus Akun"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: BULK ASSIGN MENTORS */}
+      {activeTab === 'ASSIGN' && (
+        <div className="space-y-4">
+          <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 shrink-0" />
+            <span>Pilih pendamping untuk setiap kelompok menggunakan dropdown, lalu klik <strong>"Simpan Semua Perubahan"</strong> di bagian bawah. Data tidak akan hilang karena tersimpan sekaligus.</span>
+          </div>
+
+          <div className="overflow-x-auto rounded-2xl border border-white/10 glass-panel bg-umla-navy-950">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="bg-umla-navy-900/80 border-b border-white/10 text-gray-400 font-bold uppercase tracking-wider text-[10px]">
+                  <th className="px-4 py-3 w-16">No.</th>
+                  <th className="px-4 py-3">Nama Kelompok</th>
+                  <th className="px-4 py-3 w-24">Anggota</th>
+                  <th className="px-4 py-3 min-w-[280px]">Kakak Pendamping</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {groups.map((g) => {
+                  const currentMentorId = bulkAssignments[g.id] || '';
+                  const originalMentorId = g.mentors?.[0]?.id || '';
+                  const isChanged = currentMentorId !== originalMentorId;
+
+                  return (
+                    <tr key={g.id} className={`transition-colors ${isChanged ? 'bg-umla-gold/5' : 'hover:bg-white/5'}`}>
+                      <td className="px-4 py-3 font-mono font-black text-umla-gold">
+                        {g.number < 10 ? '0' + g.number : g.number}
+                      </td>
+                      <td className="px-4 py-3 font-bold text-white">{g.name}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${g.memberCount >= g.capacity ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
+                          {g.memberCount}/{g.capacity}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={currentMentorId}
+                            onChange={(e) => {
+                              setBulkAssignments(prev => ({ ...prev, [g.id]: e.target.value }));
+                              setHasUnsavedChanges(true);
+                            }}
+                            className="w-full px-3 py-2 rounded-xl text-xs bg-umla-navy-900 border border-white/10 text-white focus:border-umla-gold focus:outline-none appearance-none cursor-pointer"
+                            style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
+                          >
+                            <option value="" style={{ backgroundColor: '#0a1628', color: '#9ca3af' }}>— Belum ada pendamping —</option>
+                            {mentors.map((m) => (
+                              <option key={m.id} value={m.id} style={{ backgroundColor: '#0a1628', color: '#fff' }}>
+                                {m.fullName} ({m.email})
+                              </option>
+                            ))}
+                          </select>
+                          {isChanged && (
+                            <span className="shrink-0 w-2 h-2 rounded-full bg-umla-gold animate-pulse" title="Berubah" />
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Sticky Save All Button */}
+          <div className="sticky bottom-20 md:bottom-4 z-10 pt-4">
+            <button
+              onClick={handleBulkSave}
+              disabled={saving || !hasUnsavedChanges}
+              className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider shadow-2xl flex items-center justify-center gap-3 transition-all ${
+                hasUnsavedChanges
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white shadow-emerald-500/30 hover:scale-[1.01]'
+                  : 'bg-white/10 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              {saving ? (
+                <RefreshCw className="w-5 h-5 animate-spin" />
+              ) : (
+                <Save className="w-5 h-5" />
+              )}
+              {saving ? 'MENYIMPAN...' : hasUnsavedChanges ? `SIMPAN SEMUA PERUBAHAN PENDAMPING (${Object.values(bulkAssignments).filter(v => v).length} kelompok terisi)` : 'SEMUA PERUBAHAN SUDAH TERSIMPAN ✓'}
+            </button>
           </div>
         </div>
       )}
@@ -498,7 +742,6 @@ export default function AdminGroupsPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setEditingGroup(null);
                       setIsAddMentorOpen(true);
                     }}
                     className="text-[10px] text-umla-gold hover:underline font-bold"
@@ -670,6 +913,141 @@ export default function AdminGroupsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: EDIT MENTOR (Edit Email, Password, Name, Phone) */}
+      {editingMentor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
+          <div className="relative w-full max-w-md glass-panel bg-umla-navy-950 rounded-3xl p-6 sm:p-8 border-2 border-blue-500/40 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div>
+                <div className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded-full mb-1 border border-blue-500/30">
+                  <Edit2 className="w-3 h-3" />
+                  EDIT DATA PENDAMPING
+                </div>
+                <h3 className="text-lg font-black text-white">Edit {editingMentor.fullName}</h3>
+              </div>
+              <button onClick={() => setEditingMentor(null)} className="p-2 rounded-full bg-white/10 text-gray-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateMentor} className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-bold text-gray-300 mb-1">
+                  Nama Lengkap <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editMentorName}
+                  onChange={(e) => setEditMentorName(e.target.value)}
+                  required
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs glass-input font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-300 mb-1">
+                  Email Akun (Login) <span className="text-rose-400">*</span>
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    value={editMentorEmail}
+                    onChange={(e) => setEditMentorEmail(e.target.value)}
+                    required
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl text-xs glass-input font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-300 mb-1">
+                  Password Baru <span className="text-gray-500">(kosongkan jika tidak ingin mengubah)</span>
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={editMentorPassword}
+                    onChange={(e) => setEditMentorPassword(e.target.value)}
+                    placeholder="Isi untuk reset password..."
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl text-xs glass-input font-mono"
+                  />
+                </div>
+                <span className="text-[10px] text-yellow-400 mt-1 block">⚠️ Jika mentor tidak bisa login, isi password baru di sini (misal: Admin123!)</span>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-300 mb-1">No. WhatsApp / HP</label>
+                <div className="relative">
+                  <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="tel"
+                    value={editMentorPhone}
+                    onChange={(e) => setEditMentorPhone(e.target.value)}
+                    placeholder="081234567890"
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl text-xs glass-input"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setEditingMentor(null)}
+                  className="flex-1 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 font-bold text-xs"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2"
+                >
+                  {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Simpan Perubahan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: DELETE MENTOR CONFIRMATION */}
+      {deletingMentor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
+          <div className="relative w-full max-w-sm glass-panel bg-umla-navy-950 rounded-3xl p-6 border-2 border-rose-500/40 shadow-2xl space-y-5">
+            <div className="text-center">
+              <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-rose-500/20 flex items-center justify-center">
+                <Trash2 className="w-7 h-7 text-rose-400" />
+              </div>
+              <h3 className="text-base font-black text-white">Hapus Akun Pendamping?</h3>
+              <p className="text-xs text-gray-300 mt-2">
+                Akun <span className="font-bold text-white">{deletingMentor.fullName}</span> ({deletingMentor.email}) akan dihapus permanen beserta semua assignment kelompoknya.
+              </p>
+              <p className="text-[10px] text-rose-400 mt-1 font-bold">⚠️ Tindakan ini tidak bisa dibatalkan!</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeletingMentor(null)}
+                className="flex-1 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 font-bold text-xs"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDeleteMentor}
+                disabled={saving}
+                className="flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2"
+              >
+                {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                Ya, Hapus!
+              </button>
+            </div>
           </div>
         </div>
       )}
