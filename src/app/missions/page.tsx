@@ -130,8 +130,8 @@ export default function MissionsPage() {
   const handleOrmawaPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setOrmawaError('Ukuran file foto melebihi batas maksimal 5MB.');
+      if (file.size > 2 * 1024 * 1024) {
+        setOrmawaError('Ukuran file foto melebihi batas maksimal 2MB.');
         return;
       }
       setOrmawaError(null);
@@ -187,8 +187,8 @@ export default function MissionsPage() {
   const handleDzuhurPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setDzuhurError('Ukuran file foto melebihi batas maksimal 5MB.');
+      if (file.size > 2 * 1024 * 1024) {
+        setDzuhurError('Ukuran file foto melebihi batas maksimal 2MB.');
         return;
       }
       setDzuhurError(null);
@@ -476,7 +476,7 @@ export default function MissionsPage() {
                         <>
                           <Camera className="w-6 h-6 text-umla-gold mb-1" />
                           <span className="text-xs font-bold text-white">Ambil Foto / Unggah Bukti</span>
-                          <span className="text-[10px] text-gray-400 mt-0.5">JPG, PNG (Maksimal 5MB)</span>
+                          <span className="text-[10px] text-gray-400 mt-0.5">JPG, PNG (Maksimal 2MB)</span>
                         </>
                       )}
                       <input
@@ -721,7 +721,7 @@ export default function MissionsPage() {
                           <>
                             <Camera className="w-7 h-7 text-teal-400 mb-1" />
                             <span className="text-xs font-bold text-white">Ambil Foto / Unggah Bukti</span>
-                            <span className="text-[10px] text-gray-400 mt-0.5">JPG, PNG (Maks 5MB)</span>
+                            <span className="text-[10px] text-gray-400 mt-0.5">JPG, PNG (Maks 2MB)</span>
                           </>
                         )}
                         <input

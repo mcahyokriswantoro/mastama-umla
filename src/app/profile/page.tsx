@@ -94,8 +94,8 @@ export default function ProfilePage() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setErrorMsg('Ukuran file foto melebihi batas maksimal 5MB.');
+      if (file.size > 2 * 1024 * 1024) {
+        setErrorMsg('Ukuran file foto melebihi batas maksimal 2MB.');
         return;
       }
       setErrorMsg(null);
@@ -361,7 +361,7 @@ export default function ProfilePage() {
 
             {/* Option 1: Upload File */}
             <div>
-              <label className="block text-[11px] font-bold text-gray-300 mb-2">1. Unggah Foto Pribadi (Maks 5MB)</label>
+              <label className="block text-[11px] font-bold text-gray-300 mb-2">1. Unggah Foto Pribadi (Maks 2MB)</label>
               <label className="flex items-center justify-center gap-2 p-3 rounded-2xl border-2 border-dashed border-umla-gold/30 hover:border-umla-gold/70 bg-umla-navy-900 cursor-pointer transition-all">
                 <Upload className="w-4 h-4 text-umla-gold" />
                 <span className="text-xs font-bold text-white">Pilih File Foto (JPG / PNG)</span>

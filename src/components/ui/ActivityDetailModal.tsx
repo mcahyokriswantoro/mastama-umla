@@ -50,8 +50,8 @@ export default function ActivityDetailModal({
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setErrorMsg('Ukuran file foto melebihi batas maksimal 5MB.');
+      if (file.size > 2 * 1024 * 1024) {
+        setErrorMsg('Ukuran file foto melebihi batas maksimal 2MB.');
         return;
       }
       setErrorMsg(null);
@@ -306,7 +306,7 @@ export default function ActivityDetailModal({
                         <>
                           <Camera className="w-6 h-6 text-umla-gold mb-1" />
                           <span className="text-[11px] text-gray-300">Pilih Foto atau Ambil Gambar</span>
-                          <span className="text-[9px] text-gray-500">JPG, PNG (Maks 5MB)</span>
+                          <span className="text-[9px] text-gray-500">JPG, PNG (Maks 2MB)</span>
                         </>
                       )}
                       <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
