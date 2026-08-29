@@ -28,8 +28,8 @@ export async function GET() {
             approvals: { include: { reviewer: true } },
           },
         },
-        ormawaLogs: { where: { status: 'COMPLETED' } },
-        spiritualLogs: { where: { status: 'COMPLETED' } },
+        ormawaLogs: { where: { status: { in: ['COMPLETED', 'APPROVED'] } } },
+        spiritualLogs: { where: { status: { in: ['COMPLETED', 'APPROVED'] } } },
         aiProjects: true,
         userBadges: { include: { badge: true } },
       },
@@ -38,18 +38,63 @@ export async function GET() {
 
     // 1. Sheet: Rekap Passport Mahasiswa
     const passportRecapData = students.map((st, idx) => {
-      const completedCodes = new Set(
-        st.submissions
-          .filter((s) => s.status === 'COMPLETED' && s.activity?.code)
-          .map((s) => s.activity.code)
+      const validSubmissions = (st.submissions || []).filter(
+        (s) => (s.status === 'COMPLETED' || s.status === 'APPROVED') && s.activity
       );
 
-      const hasPra = completedCodes.has('ACT_PRA_01') || completedCodes.has('ACT_PRA_02');
-      const hasOpen = completedCodes.has('ACT_OPEN_01') || completedCodes.has('ACT_OPEN_02');
-      const hasUni = completedCodes.has('ACT_UNI_01') || completedCodes.has('ACT_UNI_02');
-      const hasFak = completedCodes.has('ACT_FAK_01') || completedCodes.has('ACT_FAK_02');
-      const hasPensi = completedCodes.has('ACT_PENSI_01') || completedCodes.has('ACT_PENSI_02');
-      const hasClose = completedCodes.has('ACT_CLOSE_01') || completedCodes.has('ACT_CLOSE_02');
+      const completedCodes = new Set(validSubmissions.map((s) => s.activity.code));
+      const completedJourneyCodes = new Set(
+        validSubmissions.map((s) => s.activity.journey?.code).filter(Boolean)
+      );
+      const completedJourneyOrders = new Set(
+        validSubmissions.map((s) => s.activity.journey?.orderNum).filter(Boolean)
+      );
+
+      const hasPra =
+        completedJourneyOrders.has(1) ||
+        completedJourneyOrders.has(2) ||
+        completedJourneyCodes.has('JOURNEY_01') ||
+        completedJourneyCodes.has('JOURNEY_02') ||
+        completedCodes.has('ACT_01') ||
+        completedCodes.has('ACT_02') ||
+        completedCodes.has('ACT_PRA_01') ||
+        completedCodes.has('ACT_PRA_02');
+
+      const hasOpen =
+        completedJourneyOrders.has(3) ||
+        completedJourneyCodes.has('JOURNEY_03') ||
+        completedCodes.has('ACT_03') ||
+        completedCodes.has('ACT_04') ||
+        completedCodes.has('ACT_OPEN_01') ||
+        completedCodes.has('ACT_OPEN_02');
+
+      const hasUni =
+        completedJourneyOrders.has(4) ||
+        completedJourneyCodes.has('JOURNEY_04') ||
+        completedCodes.has('ACT_05') ||
+        completedCodes.has('ACT_06') ||
+        completedCodes.has('ACT_07') ||
+        completedCodes.has('ACT_08') ||
+        completedCodes.has('ACT_UNI_01') ||
+        completedCodes.has('ACT_UNI_02');
+
+      const hasFak =
+        completedJourneyOrders.has(5) ||
+        completedJourneyCodes.has('JOURNEY_05') ||
+        completedCodes.has('ACT_FAK_01') ||
+        completedCodes.has('ACT_FAK_02');
+
+      const hasPensi =
+        completedJourneyOrders.has(6) ||
+        completedJourneyCodes.has('JOURNEY_06') ||
+        completedCodes.has('ACT_PENSI_01') ||
+        completedCodes.has('ACT_PENSI_02');
+
+      const hasClose =
+        completedJourneyOrders.has(7) ||
+        completedJourneyCodes.has('JOURNEY_07') ||
+        completedCodes.has('ACT_CLOSE_01') ||
+        completedCodes.has('ACT_CLOSE_02');
 
       const mentors =
         st.group?.mentorAssignments && st.group.mentorAssignments.length > 0
