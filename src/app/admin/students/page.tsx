@@ -13,7 +13,9 @@ import {
   X,
   User,
   Hash,
-  Users
+  Users,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
