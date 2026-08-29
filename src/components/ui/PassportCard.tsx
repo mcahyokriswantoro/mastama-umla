@@ -114,12 +114,12 @@ export default function PassportCard({ user, stamps }: PassportCardProps) {
 
           <div>
             <span className="text-[10px] text-gray-400 uppercase tracking-wider">Fakultas</span>
-            <p className="font-semibold text-xs text-gray-200 truncate">{profile.faculty.name}</p>
+            <p className="font-semibold text-xs text-gray-200 truncate">{profile.faculty?.name || '-'}</p>
           </div>
 
           <div>
             <span className="text-[10px] text-gray-400 uppercase tracking-wider">Program Studi</span>
-            <p className="font-semibold text-xs text-gray-200 truncate">{profile.studyProgram.name}</p>
+            <p className="font-semibold text-xs text-gray-200 truncate">{profile.studyProgram?.name || '-'}</p>
           </div>
 
           <div>

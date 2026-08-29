@@ -15,6 +15,7 @@ import {
 export default function AdminReportsPage() {
   const [logs, setLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(true);
+  const [downloading, setDownloading] = useState(false);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
@@ -31,6 +32,37 @@ export default function AdminReportsPage() {
       console.error(err);
     } finally {
       setLoadingLogs(false);
+    }
+  };
+
+  const handleDownloadExcel = async () => {
+    try {
+      setDownloading(true);
+      const res = await fetch('/api/admin/export');
+      if (!res.ok) {
+        let errMessage = 'Gagal mengunduh berkas Excel.';
+        try {
+          const errData = await res.json();
+          if (errData.error) errMessage = errData.error;
+        } catch {}
+        alert(errMessage);
+        return;
+      }
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `REKAP_DIGITAL_PASSPORT_MASTAMA_UMLA_2026_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+    } catch (err: any) {
+      console.error('Download error:', err);
+      alert('Terjadi kesalahan saat mengunduh Excel: ' + (err.message || ''));
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -59,13 +91,18 @@ export default function AdminReportsPage() {
         </div>
 
         {/* 1-Click Excel Download Button (Requirement 45) */}
-        <a
-          href="/api/admin/export"
-          className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-black text-xs uppercase tracking-wider shadow-xl shadow-emerald-500/25 flex items-center gap-2 transition-all hover:scale-105"
+        <button
+          onClick={handleDownloadExcel}
+          disabled={downloading}
+          className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider shadow-xl shadow-emerald-500/25 flex items-center gap-2 transition-all hover:scale-105 cursor-pointer"
         >
-          <Download className="w-4 h-4" />
-          Download Rekap Passport (.xlsx)
-        </a>
+          {downloading ? (
+            <RefreshCw className="w-4 h-4 animate-spin" />
+          ) : (
+            <Download className="w-4 h-4" />
+          )}
+          {downloading ? 'Memproses Excel...' : 'Download Rekap Passport (.xlsx)'}
+        </button>
       </div>
 
       {/* Audit Logs Trail Table (Requirement 46) */}

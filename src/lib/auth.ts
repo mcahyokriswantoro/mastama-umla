@@ -80,16 +80,20 @@ export async function getCurrentUser(): Promise<UserSession | null> {
         ? {
             id: user.studentProfile.id,
             nim: user.studentProfile.nim,
-            faculty: {
-              id: user.studentProfile.faculty.id,
-              name: user.studentProfile.faculty.name,
-              code: user.studentProfile.faculty.code,
-            },
-            studyProgram: {
-              id: user.studentProfile.studyProgram.id,
-              name: user.studentProfile.studyProgram.name,
-              code: user.studentProfile.studyProgram.code,
-            },
+            faculty: user.studentProfile.faculty
+              ? {
+                  id: user.studentProfile.faculty.id,
+                  name: user.studentProfile.faculty.name,
+                  code: user.studentProfile.faculty.code,
+                }
+              : null,
+            studyProgram: user.studentProfile.studyProgram
+              ? {
+                  id: user.studentProfile.studyProgram.id,
+                  name: user.studentProfile.studyProgram.name,
+                  code: user.studentProfile.studyProgram.code,
+                }
+              : null,
             group: user.studentProfile.group
               ? {
                   id: user.studentProfile.group.id,

@@ -46,8 +46,8 @@ export interface UserSession {
   studentProfile?: {
     id: string;
     nim: string;
-    faculty: { id: string; name: string; code: string };
-    studyProgram: { id: string; name: string; code: string };
+    faculty?: { id: string; name: string; code: string } | null;
+    studyProgram?: { id: string; name: string; code: string } | null;
     group?: { id: string; name: string; number: number; mentor?: string } | null;
     totalXp: number;
     streakCount: number;
