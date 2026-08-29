@@ -11,27 +11,113 @@ export async function GET() {
     }
 
     const students = await prisma.studentProfile.findMany({
-      include: {
-        user: true,
-        faculty: true,
-        studyProgram: true,
+      select: {
+        id: true,
+        nim: true,
+        totalXp: true,
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phoneNumber: true,
+          },
+        },
+        faculty: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+        studyProgram: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
         group: {
-          include: {
+          select: {
+            id: true,
+            name: true,
             mentorAssignments: {
-              include: { mentor: true },
+              select: {
+                mentor: {
+                  select: {
+                    id: true,
+                    fullName: true,
+                  },
+                },
+              },
             },
           },
         },
         submissions: {
-          include: {
-            activity: { include: { journey: true } },
-            approvals: { include: { reviewer: true } },
+          select: {
+            id: true,
+            status: true,
+            submissionDate: true,
+            submissionTime: true,
+            locationNote: true,
+            activityTitle: true,
+            activity: {
+              select: {
+                id: true,
+                code: true,
+                title: true,
+                location: true,
+                xpReward: true,
+                journey: {
+                  select: {
+                    id: true,
+                    code: true,
+                    title: true,
+                    orderNum: true,
+                  },
+                },
+              },
+            },
+            approvals: {
+              select: {
+                id: true,
+                status: true,
+                feedback: true,
+                reviewer: {
+                  select: {
+                    id: true,
+                    fullName: true,
+                  },
+                },
+              },
+            },
           },
         },
-        ormawaLogs: { where: { status: { in: ['COMPLETED', 'APPROVED'] } } },
-        spiritualLogs: { where: { status: { in: ['COMPLETED', 'APPROVED'] } } },
-        aiProjects: true,
-        userBadges: { include: { badge: true } },
+        ormawaLogs: {
+          where: { status: { in: ['COMPLETED', 'APPROVED'] } },
+          select: {
+            id: true,
+            status: true,
+          },
+        },
+        spiritualLogs: {
+          where: { status: { in: ['COMPLETED', 'APPROVED'] } },
+          select: {
+            id: true,
+            status: true,
+          },
+        },
+        aiProjects: {
+          select: {
+            id: true,
+            stage: true,
+          },
+        },
+        userBadges: {
+          select: {
+            id: true,
+          },
+        },
       },
       orderBy: { nim: 'asc' },
     });
