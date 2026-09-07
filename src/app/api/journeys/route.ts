@@ -2,12 +2,22 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
     const studentProfileId = user?.studentProfile?.id;
 
+    const { searchParams } = new URL(request.url);
+    const yearId = searchParams.get('yearId');
+
+    const journeyFilter = yearId && yearId !== 'ALL' ? { mastamaYearId: yearId } : undefined;
+
+    const mastamaYears = await prisma.mastamaYear.findMany({
+      orderBy: { year: 'desc' },
+    });
+
     const journeys = await prisma.journey.findMany({
+      where: journeyFilter,
       include: {
         missions: {
           include: {
@@ -102,11 +112,10 @@ export async function GET() {
           category: m.category,
           targetCount: m.targetCount,
           xpReward: m.xpReward,
+          icon: m.icon,
           activities,
         };
       });
-
-      const isCompleted = totalActivities > 0 && completedActivities === totalActivities;
 
       return {
         id: j.id,
@@ -116,18 +125,19 @@ export async function GET() {
         targetDate: j.targetDate.toISOString(),
         mode: j.mode,
         location: j.location,
-        orderNum: j.orderNum,
+        isUnlocked: j.isUnlocked,
         icon: j.icon,
-        totalActivities,
-        completedActivities,
-        isCompleted,
+        progress: totalActivities > 0 ? Math.round((completedActivities / totalActivities) * 100) : 0,
         missions,
       };
     });
 
-    return NextResponse.json({ journeys: formattedJourneys });
+    return NextResponse.json({ 
+      mastamaYears,
+      journeys: formattedJourneys 
+    });
   } catch (error: any) {
-    console.error('Error fetching journeys:', error);
-    return NextResponse.json({ error: 'Gagal memuat rangkaian perjalanan.' }, { status: 500 });
+    console.error('Error in GET /api/journeys:', error);
+    return NextResponse.json({ error: error?.message || 'Gagal mengambil data journey.' }, { status: 500 });
   }
 }

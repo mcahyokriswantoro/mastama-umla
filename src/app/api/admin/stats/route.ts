@@ -2,12 +2,26 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
     if (!user || user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Akses khusus Administrator.' }, { status: 403 });
     }
+
+    const { searchParams } = new URL(request.url);
+    const yearId = searchParams.get('yearId');
+
+    // Filters based on yearId
+    const studentFilter = yearId && yearId !== 'ALL' ? { mastamaYearId: yearId } : undefined;
+    const groupFilter = yearId && yearId !== 'ALL' ? { mastamaYearId: yearId } : undefined;
+    const activityFilter = yearId && yearId !== 'ALL' ? { journey: { mastamaYearId: yearId }, isActive: true } : { isActive: true };
+    const submissionFilter = yearId && yearId !== 'ALL' ? { student: { mastamaYearId: yearId } } : undefined;
+
+    // Fetch all available years for the dropdown
+    const mastamaYears = await prisma.mastamaYear.findMany({
+      orderBy: { year: 'desc' }
+    });
 
     const [
       totalStudents,
@@ -20,21 +34,42 @@ export async function GET() {
       groups,
       recentAuditLogs,
     ] = await Promise.all([
-      prisma.studentProfile.count(),
-      prisma.user.count({ where: { role: 'GROUP_MENTOR' } }),
-      prisma.group.count(),
-      prisma.activity.count({ where: { isActive: true } }),
-      prisma.activitySubmission.count(),
-      prisma.approval.count({ where: { status: 'APPROVED' } }),
+      prisma.studentProfile.count({ where: studentFilter }),
+      prisma.user.count({ 
+        where: { 
+          role: 'GROUP_MENTOR',
+          ...(yearId && yearId !== 'ALL' ? { mentorAssignments: { some: { group: { mastamaYearId: yearId } } } } : {})
+        } 
+      }),
+      prisma.group.count({ where: groupFilter }),
+      prisma.activity.count({ where: activityFilter }),
+      prisma.activitySubmission.count({ where: submissionFilter }),
+      prisma.approval.count({ 
+        where: { 
+          status: 'APPROVED',
+          ...(yearId && yearId !== 'ALL' ? { submission: { student: { mastamaYearId: yearId } } } : {})
+        } 
+      }),
       prisma.faculty.findMany({
         include: {
-          _count: { select: { students: true } },
+          _count: { 
+            select: { 
+              students: studentFilter ? { where: studentFilter } : true 
+            } 
+          },
           studyPrograms: {
-            include: { _count: { select: { students: true } } },
+            include: { 
+              _count: { 
+                select: { 
+                  students: studentFilter ? { where: studentFilter } : true 
+                } 
+              } 
+            },
           },
         },
       }),
       prisma.group.findMany({
+        where: groupFilter,
         include: {
           _count: { select: { students: true } },
           mentorAssignments: {
@@ -51,11 +86,17 @@ export async function GET() {
     ]);
 
     const pendingSubmissionsCount = await prisma.activitySubmission.count({
-      where: { status: 'UNDER_REVIEW' },
+      where: { 
+        status: 'UNDER_REVIEW',
+        ...submissionFilter 
+      },
     });
 
     const completedSubmissionsCount = await prisma.activitySubmission.count({
-      where: { status: 'COMPLETED' },
+      where: { 
+        status: 'COMPLETED',
+        ...submissionFilter
+      },
     });
 
     // Faculty breakdown chart data
@@ -67,7 +108,13 @@ export async function GET() {
 
     // Study Program breakdown
     const studyPrograms = await prisma.studyProgram.findMany({
-      include: { _count: { select: { students: true } } },
+      include: { 
+        _count: { 
+          select: { 
+            students: studentFilter ? { where: studentFilter } : true 
+          } 
+        } 
+      },
       orderBy: { students: { _count: 'desc' } },
     });
     
@@ -79,6 +126,7 @@ export async function GET() {
 
     // Top 10 Students by XP
     const topStudents = await prisma.studentProfile.findMany({
+      where: studentFilter,
       take: 10,
       orderBy: { totalXp: 'desc' },
       include: {
@@ -96,6 +144,7 @@ export async function GET() {
     }));
 
     return NextResponse.json({
+      mastamaYears,
       summary: {
         totalStudents,
         totalMentors,

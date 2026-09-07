@@ -3,14 +3,19 @@ import prisma from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import ExcelJS from 'exceljs';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
     if (!user || user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Akses ditolak.' }, { status: 403 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const yearId = searchParams.get('yearId');
+    const studentFilter = yearId && yearId !== 'ALL' ? { mastamaYearId: yearId } : undefined;
+
     const students = await prisma.studentProfile.findMany({
+      where: studentFilter,
       select: {
         id: true,
         nim: true,
@@ -121,6 +126,12 @@ export async function GET() {
       },
       orderBy: { nim: 'asc' },
     });
+
+    let yearName = 'SEMUA_TAHUN';
+    if (yearId && yearId !== 'ALL') {
+      const yr = await prisma.mastamaYear.findUnique({ where: { id: yearId } });
+      if (yr) yearName = yr.year.toString();
+    }
 
     // 1. Sheet: Rekap Passport Mahasiswa
     const passportRecapData = students.map((st, idx) => {
@@ -243,7 +254,7 @@ export async function GET() {
     }
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'MASTAMA UMLA 2026';
+    workbook.creator = `MASTAMA UMLA ${yearName}`;
     workbook.lastModifiedBy = 'Admin';
     workbook.created = new Date();
     workbook.modified = new Date();
@@ -347,7 +358,7 @@ export async function GET() {
           userId: user.id,
           action: 'DATA_EXPORT_EXCEL',
           entityType: 'REPORT',
-          details: 'Admin exported Digital Student Passport recapitulation Excel file.',
+          details: `Admin exported Digital Student Passport recapitulation Excel file (Year: ${yearName}).`,
         },
       });
     } catch (auditErr) {
@@ -359,7 +370,7 @@ export async function GET() {
     return new Response(uint8Array, {
       status: 200,
       headers: {
-        'Content-Disposition': 'attachment; filename="REKAP_DIGITAL_PASSPORT_MASTAMA_UMLA_2026.xlsx"',
+        'Content-Disposition': `attachment; filename="REKAP_DIGITAL_PASSPORT_MASTAMA_UMLA_${yearName}.xlsx"`,
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       },
     });

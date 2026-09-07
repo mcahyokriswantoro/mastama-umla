@@ -27,6 +27,8 @@ export default function AdminActivitiesPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedJourneyFilter, setSelectedJourneyFilter] = useState('ALL');
+  const [selectedYearId, setSelectedYearId] = useState<string>('ALL');
+  const [mastamaYears, setMastamaYears] = useState<any[]>([]);
 
   // Edit Modal States
   const [editingActivity, setEditingActivity] = useState<any | null>(null);
@@ -51,17 +53,20 @@ export default function AdminActivitiesPage() {
 
   useEffect(() => {
     fetchJourneys();
-  }, []);
+  }, [selectedYearId]);
 
   const fetchJourneys = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/journeys');
+      const res = await fetch(`/api/journeys?yearId=${selectedYearId}`);
       if (res.ok) {
         const contentType = res.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const data = await res.json();
           setJourneys(data.journeys || []);
+          if (data.mastamaYears) {
+            setMastamaYears(data.mastamaYears);
+          }
         }
       }
     } catch (err) {
@@ -180,7 +185,7 @@ export default function AdminActivitiesPage() {
       )}
 
       {/* Filter & Search Bar */}
-      <div className="p-4 rounded-2xl glass-panel bg-umla-navy-950 border border-white/10 flex flex-col sm:flex-row items-center gap-3">
+      <div className="p-4 rounded-2xl glass-panel bg-umla-navy-950 border border-white/10 flex flex-col lg:flex-row items-center gap-3">
         <div className="relative flex-1 w-full">
           <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
@@ -192,20 +197,38 @@ export default function AdminActivitiesPage() {
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <SlidersHorizontal className="w-4 h-4 text-umla-gold shrink-0" />
-          <select
-            value={selectedJourneyFilter}
-            onChange={(e) => setSelectedJourneyFilter(e.target.value)}
-            className="w-full sm:w-64 px-3 py-2 rounded-xl text-xs glass-input bg-umla-navy-900"
-          >
-            <option value="ALL">Semua Tanggal Journey</option>
-            {journeys.map((j) => (
-              <option key={j.id} value={j.id}>
-                {j.title}
-              </option>
-            ))}
-          </select>
+        <div className="flex flex-col sm:flex-row items-center gap-2 w-full lg:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <SlidersHorizontal className="w-4 h-4 text-umla-gold shrink-0" />
+            <select
+              value={selectedYearId}
+              onChange={(e) => setSelectedYearId(e.target.value)}
+              className="w-full sm:w-48 px-3 py-2 rounded-xl text-xs glass-input bg-umla-navy-900 border border-umla-gold/30 text-white font-bold"
+            >
+              <option value="ALL">Semua Tahun</option>
+              {mastamaYears.map((y: any) => (
+                <option key={y.id} value={y.id}>
+                  Tahun Ajaran {y.year}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Calendar className="w-4 h-4 text-umla-gold shrink-0" />
+            <select
+              value={selectedJourneyFilter}
+              onChange={(e) => setSelectedJourneyFilter(e.target.value)}
+              className="w-full sm:w-56 px-3 py-2 rounded-xl text-xs glass-input bg-umla-navy-900"
+            >
+              <option value="ALL">Semua Tanggal Journey</option>
+              {journeys.map((j) => (
+                <option key={j.id} value={j.id}>
+                  {j.title}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

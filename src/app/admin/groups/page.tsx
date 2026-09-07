@@ -30,6 +30,8 @@ export default function AdminGroupsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'GROUPS' | 'MENTORS' | 'ASSIGN'>('GROUPS');
+  const [selectedYearId, setSelectedYearId] = useState<string>('ALL');
+  const [mastamaYears, setMastamaYears] = useState<any[]>([]);
 
   // Edit group modal
   const [editingGroup, setEditingGroup] = useState<any | null>(null);
@@ -61,17 +63,20 @@ export default function AdminGroupsPage() {
 
   useEffect(() => {
     fetchGroups();
-  }, []);
+  }, [selectedYearId]);
 
   const fetchGroups = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/groups');
+      const res = await fetch(`/api/admin/groups?yearId=${selectedYearId}`);
       if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
         const data = await res.json();
         setGroups(data.groups || []);
         setGroupAssignMode(data.groupAssignMode || 'ADMIN_ASSIGN');
         setMentors(data.mentors || []);
+        if (data.mastamaYears) {
+          setMastamaYears(data.mastamaYears);
+        }
       }
     } catch (err) {
       console.error('Error fetching admin groups:', err);
@@ -330,7 +335,19 @@ export default function AdminGroupsPage() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={selectedYearId}
+            onChange={(e) => setSelectedYearId(e.target.value)}
+            className="px-4 py-2.5 rounded-xl bg-umla-navy-900 border border-umla-gold/30 text-white font-bold text-xs outline-none focus:border-umla-gold transition-colors cursor-pointer"
+          >
+            <option value="ALL">Semua Tahun</option>
+            {mastamaYears.map((y: any) => (
+              <option key={y.id} value={y.id}>
+                Tahun Ajaran {y.year}
+              </option>
+            ))}
+          </select>
           <button
             onClick={() => setIsAddMentorOpen(true)}
             className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-umla-gold to-umla-gold-500 hover:from-yellow-400 hover:to-umla-gold text-umla-navy-950 font-black text-xs inline-flex items-center gap-2 shadow-lg shadow-umla-gold/20 transition-transform hover:scale-105"

@@ -3,14 +3,23 @@ import prisma from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
     if (!user || user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Akses khusus Administrator.' }, { status: 403 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const yearId = searchParams.get('yearId');
+    const groupFilter = yearId && yearId !== 'ALL' ? { mastamaYearId: yearId } : undefined;
+
+    const mastamaYears = await prisma.mastamaYear.findMany({
+      orderBy: { year: 'desc' },
+    });
+
     const groups = await prisma.group.findMany({
+      where: groupFilter,
       include: {
         mentorAssignments: {
           include: { mentor: { select: { id: true, fullName: true, email: true, phoneNumber: true } } },
@@ -39,6 +48,7 @@ export async function GET() {
     });
 
     return NextResponse.json({
+      mastamaYears,
       groups: groups.map((g) => ({
         id: g.id,
         number: g.number,

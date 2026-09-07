@@ -21,6 +21,8 @@ import {
   Compass,
   Cpu,
   ExternalLink,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 export default function MentorApprovalsPage() {
@@ -29,6 +31,11 @@ export default function MentorApprovalsPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'PENDING' | 'HISTORY'>('PENDING');
   const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'MASTAMA' | 'SPIRITUAL' | 'ORMAWA' | 'AI_PROJECT'>('ALL');
+
+  // Pagination states
+  const [pendingPage, setPendingPage] = useState(1);
+  const [historyPage, setHistoryPage] = useState(1);
+  const ITEMS_PER_PAGE = 25;
 
   // Selected submission for rejection modal
   const [rejectingSub, setRejectingSub] = useState<any | null>(null);
@@ -39,6 +46,12 @@ export default function MentorApprovalsPage() {
   useEffect(() => {
     fetchSubmissions();
   }, []);
+
+  // Reset page when category or tab changes
+  useEffect(() => {
+    setPendingPage(1);
+    setHistoryPage(1);
+  }, [categoryFilter, activeTab]);
 
   const fetchSubmissions = async () => {
     try {
@@ -119,6 +132,19 @@ export default function MentorApprovalsPage() {
     return s.type === categoryFilter;
   });
 
+  // Pagination calculations
+  const totalPendingPages = Math.ceil(filteredPending.length / ITEMS_PER_PAGE);
+  const paginatedPending = filteredPending.slice(
+    (pendingPage - 1) * ITEMS_PER_PAGE,
+    pendingPage * ITEMS_PER_PAGE
+  );
+
+  const totalHistoryPages = Math.ceil(filteredHistory.length / ITEMS_PER_PAGE);
+  const paginatedHistory = filteredHistory.slice(
+    (historyPage - 1) * ITEMS_PER_PAGE,
+    historyPage * ITEMS_PER_PAGE
+  );
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Header */}
@@ -157,7 +183,7 @@ export default function MentorApprovalsPage() {
             }`}
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
-            Riwayat Approval ({historySubmissions.length})
+            Riwayat ({historySubmissions.length})
           </button>
         </div>
       </div>
@@ -237,178 +263,235 @@ export default function MentorApprovalsPage() {
               <p className="text-xs text-gray-400 mt-1">Tidak ada antrean approval yang tertunda untuk kelompok Anda.</p>
             </div>
           ) : (
-            filteredPending.map((sub) => (
-              <div
-                key={sub.id}
-                className="p-5 rounded-3xl glass-panel bg-umla-navy-950 border-2 border-umla-gold/30 shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-6 hover:border-umla-gold/60 transition-all"
-              >
-                {/* Left: Student & Activity Details */}
-                <div className="flex items-start gap-4">
-                  {/* Evidence Photo / Icon Preview */}
-                  {sub.type === 'AI_PROJECT' ? (
-                    <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-purple-950/60 border border-purple-500/40 flex flex-col items-center justify-center text-purple-400 shrink-0 shadow-lg p-2 text-center">
-                      <Cpu className="w-8 h-8 mb-1" />
-                      <span className="text-[10px] font-black text-purple-300">AI REPORT</span>
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => sub.evidencePhoto && setPreviewPhoto(sub.evidencePhoto)}
-                      className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-umla-navy-900 border border-umla-gold/40 shrink-0 cursor-pointer group shadow-lg"
-                    >
-                      <img
-                        src={sub.evidencePhoto || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&auto=format&fit=crop&q=80'}
-                        alt={sub.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                      />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
-                        <Eye className="w-5 h-5" />
+            <>
+              {paginatedPending.map((sub) => (
+                <div
+                  key={sub.id}
+                  className="p-5 rounded-3xl glass-panel bg-umla-navy-950 border-2 border-umla-gold/30 shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-6 hover:border-umla-gold/60 transition-all"
+                >
+                  {/* Left: Student & Activity Details */}
+                  <div className="flex items-start gap-4">
+                    {/* Evidence Photo / Icon Preview */}
+                    {sub.type === 'AI_PROJECT' ? (
+                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-purple-950/60 border border-purple-500/40 flex flex-col items-center justify-center text-purple-400 shrink-0 shadow-lg p-2 text-center">
+                        <Cpu className="w-8 h-8 mb-1" />
+                        <span className="text-[10px] font-black text-purple-300">AI REPORT</span>
                       </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold text-[10px] border border-emerald-500/30">
-                        {sub.student.group?.name || 'Kelompok 07'}
-                      </span>
-                      <span className="text-[10px] text-gray-400 font-mono">NIM: {sub.student.nim}</span>
-                      <span className={`px-2 py-0.5 rounded font-bold text-[9px] uppercase ${
-                        sub.type === 'SPIRITUAL'
-                          ? 'bg-teal-500/20 text-teal-300'
-                          : sub.type === 'ORMAWA'
-                          ? 'bg-cyan-500/20 text-cyan-300'
-                          : sub.type === 'AI_PROJECT'
-                          ? 'bg-purple-500/20 text-purple-300'
-                          : 'bg-umla-gold/20 text-umla-gold'
-                      }`}>
-                        {sub.category}
-                      </span>
-                    </div>
-
-                    <h3 className="text-base font-black text-white">{sub.student.user.fullName}</h3>
-                    <p className="text-xs text-umla-gold font-bold">{sub.title}</p>
-
-                    <p className="text-xs text-gray-300 bg-white/5 p-2.5 rounded-xl border border-white/5 leading-relaxed mt-2">
-                      "{sub.description}"
-                    </p>
-
-                    {sub.type === 'AI_PROJECT' && (
-                      <div className="flex flex-wrap gap-2 pt-1.5">
-                        {sub.proposalUrl && (
-                          <a
-                            href={sub.proposalUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-[11px] font-bold border border-purple-500/30 transition-colors"
-                          >
-                            <FileText className="w-3.5 h-3.5" />
-                            Dokumen / Laporan
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
-                        )}
-                        {sub.demoUrl && (
-                          <a
-                            href={sub.demoUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-[11px] font-bold border border-indigo-500/30 transition-colors"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                            Demo / Video Karya
-                          </a>
-                        )}
+                    ) : (
+                      <div
+                        onClick={() => sub.evidencePhoto && setPreviewPhoto(sub.evidencePhoto)}
+                        className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-umla-navy-900 border border-umla-gold/40 shrink-0 cursor-pointer group shadow-lg"
+                      >
+                        <img
+                          src={sub.evidencePhoto || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&auto=format&fit=crop&q=80'}
+                          alt={sub.title}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                          <Eye className="w-5 h-5" />
+                        </div>
                       </div>
                     )}
 
-                    <div className="flex flex-wrap items-center gap-3 text-[11px] text-gray-400 pt-1">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5 text-umla-gold" />
-                        {new Date(sub.submittedAt).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
-                      </span>
-                      {sub.type !== 'AI_PROJECT' && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 text-umla-gold" />
-                          {sub.locationNote || 'Masjid Ki Bagus Hadikusumo UMLA'}
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold text-[10px] border border-emerald-500/30">
+                          {sub.student.group?.name || 'Kelompok 07'}
                         </span>
+                        <span className="text-[10px] text-gray-400 font-mono">NIM: {sub.student.nim}</span>
+                        <span className={`px-2 py-0.5 rounded font-bold text-[9px] uppercase ${
+                          sub.type === 'SPIRITUAL'
+                            ? 'bg-teal-500/20 text-teal-300'
+                            : sub.type === 'ORMAWA'
+                            ? 'bg-cyan-500/20 text-cyan-300'
+                            : sub.type === 'AI_PROJECT'
+                            ? 'bg-purple-500/20 text-purple-300'
+                            : 'bg-umla-gold/20 text-umla-gold'
+                        }`}>
+                          {sub.category}
+                        </span>
+                      </div>
+
+                      <h3 className="text-base font-black text-white">{sub.student.user.fullName}</h3>
+                      <p className="text-xs text-umla-gold font-bold">{sub.title}</p>
+
+                      <p className="text-xs text-gray-300 bg-white/5 p-2.5 rounded-xl border border-white/5 leading-relaxed mt-2">
+                        "{sub.description}"
+                      </p>
+
+                      {sub.type === 'AI_PROJECT' && (
+                        <div className="flex flex-wrap gap-2 pt-1.5">
+                          {sub.proposalUrl && (
+                            <a
+                              href={sub.proposalUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-[11px] font-bold border border-purple-500/30 transition-colors"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                              Dokumen / Laporan
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
+                          {sub.demoUrl && (
+                            <a
+                              href={sub.demoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-[11px] font-bold border border-indigo-500/30 transition-colors"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              Demo / Video Karya
+                            </a>
+                          )}
+                        </div>
                       )}
+
+                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-gray-400 pt-1">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5 text-umla-gold" />
+                          {new Date(sub.submittedAt).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
+                        </span>
+                        {sub.type !== 'AI_PROJECT' && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5 text-umla-gold" />
+                            {sub.locationNote || 'Masjid Ki Bagus Hadikusumo UMLA'}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Right: Approve & Reject Actions */}
-                <div className="flex items-center gap-3 shrink-0 lg:border-l lg:border-white/10 lg:pl-6">
-                  <button
-                    onClick={() => setRejectingSub(sub)}
-                    disabled={processingId === sub.id}
-                    className="px-5 py-3 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-400 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all hover:scale-105"
-                  >
-                    <X className="w-4 h-4" />
-                    Tolak
-                  </button>
+                  {/* Right: Approve & Reject Actions */}
+                  <div className="flex items-center gap-3 shrink-0 lg:border-l lg:border-white/10 lg:pl-6">
+                    <button
+                      onClick={() => setRejectingSub(sub)}
+                      disabled={processingId === sub.id}
+                      className="px-5 py-3 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-400 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all hover:scale-105"
+                    >
+                      <X className="w-4 h-4" />
+                      Tolak
+                    </button>
 
+                    <button
+                      onClick={() => handleApprove(sub)}
+                      disabled={processingId === sub.id}
+                      className="px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-500/25 flex items-center gap-1.5 transition-all hover:scale-105"
+                    >
+                      {processingId === sub.id ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4 stroke-[3]" />
+                          Setujui (+{sub.xpReward} XP)
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ))}
+              
+              {/* Pagination Controls */}
+              {totalPendingPages > 0 && (
+                <div className="flex items-center justify-center gap-3 mt-6">
                   <button
-                    onClick={() => handleApprove(sub)}
-                    disabled={processingId === sub.id}
-                    className="px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-500/25 flex items-center gap-1.5 transition-all hover:scale-105"
+                    onClick={() => setPendingPage((p) => Math.max(1, p - 1))}
+                    disabled={pendingPage === 1}
+                    className="p-2 rounded-xl bg-white/5 text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    {processingId === sub.id ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        <Check className="w-4 h-4 stroke-[3]" />
-                        Setujui (+{sub.xpReward} XP)
-                      </>
-                    )}
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <span className="text-xs font-bold text-gray-400">
+                    Halaman {pendingPage} dari {totalPendingPages}
+                  </span>
+                  <button
+                    onClick={() => setPendingPage((p) => Math.min(totalPendingPages, p + 1))}
+                    disabled={pendingPage === totalPendingPages}
+                    className="p-2 rounded-xl bg-white/5 text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRight className="w-5 h-5" />
                   </button>
                 </div>
-              </div>
-            ))
+              )}
+            </>
           )}
         </div>
       ) : (
         /* HISTORY TAB */
-        <div className="space-y-3">
-          {filteredHistory.map((sub) => {
-            const isApproved = sub.status === 'COMPLETED' || sub.status === 'APPROVED';
+        <div className="space-y-4">
+          {paginatedHistory.length === 0 ? (
+            <div className="p-12 rounded-3xl glass-panel bg-umla-navy-950 text-center border border-white/10">
+              <h3 className="text-base font-black text-white">Belum Ada Riwayat!</h3>
+              <p className="text-xs text-gray-400 mt-1">Tidak ada riwayat approval pada kategori ini.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {paginatedHistory.map((sub) => {
+                const isApproved = sub.status === 'COMPLETED' || sub.status === 'APPROVED';
 
-            return (
-              <div
-                key={sub.id}
-                className="p-4 rounded-2xl glass-panel bg-umla-navy-950/70 border border-white/10 flex items-center justify-between gap-4"
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold ${
-                    isApproved ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
-                  }`}>
-                    {isApproved ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                  </div>
+                return (
+                  <div
+                    key={sub.id}
+                    className="p-4 rounded-2xl glass-panel bg-umla-navy-950/70 border border-white/10 flex items-center justify-between gap-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold ${
+                        isApproved ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                      }`}>
+                        {isApproved ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                      </div>
 
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs font-black text-white">{sub.student.user.fullName}</p>
-                      <span className="text-[10px] text-gray-400 font-mono">({sub.student.group?.name || 'Kelompok'})</span>
-                      <span className="text-[9px] px-2 py-0.5 rounded bg-white/10 text-gray-300 font-bold">{sub.category}</span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-black text-white">{sub.student.user.fullName}</p>
+                          <span className="text-[10px] text-gray-400 font-mono">({sub.student.group?.name || 'Kelompok'})</span>
+                          <span className="text-[9px] px-2 py-0.5 rounded bg-white/10 text-gray-300 font-bold">{sub.category}</span>
+                        </div>
+                        <p className="text-xs text-gray-300">{sub.title}</p>
+                        {sub.feedback && (
+                          <p className="text-[11px] text-gray-400 italic mt-0.5">Catatan: "{sub.feedback}"</p>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-300">{sub.title}</p>
-                    {sub.feedback && (
-                      <p className="text-[11px] text-gray-400 italic mt-0.5">Catatan: "{sub.feedback}"</p>
-                    )}
-                  </div>
-                </div>
 
-                <div className="text-right">
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                    isApproved ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
-                  }`}>
-                    {isApproved ? 'DISETUJUI' : 'DITOLAK'}
-                  </span>
-                  <p className="text-[10px] text-gray-500 mt-1">
-                    {new Date(sub.submittedAt).toLocaleDateString('id-ID')}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
+                    <div className="text-right">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                        isApproved ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                      }`}>
+                        {isApproved ? 'DISETUJUI' : 'DITOLAK'}
+                      </span>
+                      <p className="text-[10px] text-gray-500 mt-1">
+                        {new Date(sub.submittedAt).toLocaleDateString('id-ID')}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Pagination Controls */}
+          {totalHistoryPages > 0 && (
+            <div className="flex items-center justify-center gap-3 mt-6">
+              <button
+                onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                disabled={historyPage === 1}
+                className="p-2 rounded-xl bg-white/5 text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <span className="text-xs font-bold text-gray-400">
+                Halaman {historyPage} dari {totalHistoryPages}
+              </span>
+              <button
+                onClick={() => setHistoryPage((p) => Math.min(totalHistoryPages, p + 1))}
+                disabled={historyPage === totalHistoryPages}
+                className="p-2 rounded-xl bg-white/5 text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
         </div>
       )}
 

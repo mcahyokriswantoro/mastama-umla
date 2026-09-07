@@ -35,15 +35,16 @@ const COLORS = ['#D4AF37', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B'
 export default function AdminDashboardPage() {
   const [statsData, setStatsData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedYearId, setSelectedYearId] = useState<string>('ALL');
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [selectedYearId]);
 
   const fetchStats = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/stats');
+      const res = await fetch(`/api/admin/stats?yearId=${selectedYearId}`);
       if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
         const data = await res.json();
         setStatsData(data);
@@ -55,13 +56,15 @@ export default function AdminDashboardPage() {
     }
   };
 
-  if (loading || !statsData) {
+  if (!statsData && loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <RefreshCw className="w-8 h-8 text-umla-gold animate-spin" />
       </div>
     );
   }
+
+  if (!statsData) return null;
 
   const s = statsData.summary;
 
@@ -72,18 +75,32 @@ export default function AdminDashboardPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[11px] font-black tracking-wider border border-purple-500/30">
-              PANEL ADMINISTRATOR MASTAMA UMLA 2026
+              PANEL ADMINISTRATOR MASTAMA UMLA
             </span>
+            {loading && <RefreshCw className="w-3.5 h-3.5 text-umla-gold animate-spin" />}
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white mt-1">
             EXECUTIVE ANALYTICS & MONITORING
           </h1>
           <p className="text-xs sm:text-sm text-gray-400">
-            Pusat kendali 40 kelompok, seluruh journey, submission, analitik kehadiran, dan audit log.
+            Pusat kendali kelompok, journey, submission, analitik kehadiran, dan audit log.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <select
+            value={selectedYearId}
+            onChange={(e) => setSelectedYearId(e.target.value)}
+            className="px-4 py-2.5 rounded-2xl bg-umla-navy-900 border border-umla-gold/30 text-white font-bold text-xs outline-none focus:border-umla-gold transition-colors cursor-pointer"
+          >
+            <option value="ALL">Semua Tahun</option>
+            {statsData.mastamaYears?.map((y: any) => (
+              <option key={y.id} value={y.id}>
+                Tahun Ajaran {y.year}
+              </option>
+            ))}
+          </select>
+
           <Link
             href="/admin/announcements"
             className="px-5 py-2.5 rounded-2xl bg-umla-gold hover:brightness-110 text-umla-navy-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-umla-gold/20 flex items-center gap-2 transition-all hover:scale-105"
@@ -92,11 +109,11 @@ export default function AdminDashboardPage() {
             Pengumuman
           </Link>
           <a
-            href="/api/admin/export"
+            href={`/api/admin/export${selectedYearId !== 'ALL' ? '?yearId=' + selectedYearId : ''}`}
             className="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition-all hover:scale-105"
           >
             <FileSpreadsheet className="w-4 h-4" />
-            Export Rekap Excel (.xlsx)
+            Export Rekap Excel
           </a>
         </div>
       </div>
