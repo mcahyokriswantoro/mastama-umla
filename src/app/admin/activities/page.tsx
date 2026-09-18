@@ -58,7 +58,12 @@ export default function AdminActivitiesPage() {
   const fetchJourneys = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/journeys?yearId=${selectedYearId}`);
+      const res = await fetch(`/api/journeys?yearId=${selectedYearId}&_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
       if (res.ok) {
         const contentType = res.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
@@ -229,11 +234,31 @@ export default function AdminActivitiesPage() {
               ))}
             </select>
           </div>
+
+          <button
+            type="button"
+            onClick={() => fetchJourneys()}
+            title="Refresh Data Kegiatan"
+            className="p-2 rounded-xl bg-umla-navy-900 hover:bg-umla-navy-800 border border-umla-gold/30 text-umla-gold transition-all hover:scale-105"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </div>
 
       {/* Journeys List */}
       <div className="space-y-8">
+        {filteredJourneys.length === 0 && !loading && (
+          <div className="p-12 text-center rounded-3xl glass-panel bg-umla-navy-950 border border-white/10">
+            <Calendar className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+            <h3 className="text-base font-bold text-white">Tidak Ada Kegiatan Ditemukan</h3>
+            <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
+              {searchQuery
+                ? `Tidak ada kegiatan yang cocok dengan kata kunci "${searchQuery}".`
+                : 'Belum ada data journey/kegiatan untuk tahun ajaran yang dipilih.'}
+            </p>
+          </div>
+        )}
         {filteredJourneys.map((j) => (
           <div key={j.id} className="p-6 rounded-3xl glass-panel bg-umla-navy-950 border border-umla-gold/30 shadow-xl">
             <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">

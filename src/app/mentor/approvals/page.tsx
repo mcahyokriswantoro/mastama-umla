@@ -56,7 +56,12 @@ export default function MentorApprovalsPage() {
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/mentor/approvals');
+      const res = await fetch(`/api/mentor/approvals?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
       const data = await res.json();
       setPendingSubmissions(data.pendingSubmissions || []);
       setHistorySubmissions(data.historySubmissions || []);

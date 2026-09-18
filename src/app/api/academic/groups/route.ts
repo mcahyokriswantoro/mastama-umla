@@ -3,7 +3,12 @@ import prisma from '@/lib/prisma';
 
 export async function GET() {
   try {
+    const activeYear = await prisma.mastamaYear.findFirst({
+      where: { isActive: true },
+    });
+
     const groups = await prisma.group.findMany({
+      where: activeYear ? { mastamaYearId: activeYear.id } : undefined,
       include: {
         mentorAssignments: {
           include: {
@@ -22,10 +27,6 @@ export async function GET() {
         },
       },
       orderBy: { number: 'asc' },
-    });
-
-    const activeYear = await prisma.mastamaYear.findFirst({
-      where: { isActive: true },
     });
 
     const formattedGroups = groups.map((g) => ({

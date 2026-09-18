@@ -3,6 +3,9 @@ import prisma from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { awardXpAndCheckBadges } from '@/lib/gamification';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // GET: List all pending submissions for mentor's assigned groups (MASTAMA, Dzuhur, ORMAWA)
 export async function GET() {
   try {

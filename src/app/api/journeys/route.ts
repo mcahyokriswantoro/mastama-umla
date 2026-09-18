@@ -2,10 +2,14 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
     const studentProfileId = user?.studentProfile?.id;
+    const isAdmin = user?.role === 'ADMIN';
 
     const { searchParams } = new URL(request.url);
     const yearId = searchParams.get('yearId');
@@ -19,10 +23,33 @@ export async function GET(request: Request) {
     const journeys = await prisma.journey.findMany({
       where: journeyFilter,
       include: {
+        activities: {
+          where: isAdmin ? undefined : { isActive: true },
+          orderBy: { orderNum: 'asc' },
+          include: {
+            submissions: {
+              where: studentProfileId ? { studentId: studentProfileId } : undefined,
+              include: {
+                approvals: {
+                  include: {
+                    reviewer: {
+                      select: { fullName: true },
+                    },
+                  },
+                  orderBy: { reviewedAt: 'desc' },
+                  take: 1,
+                },
+              },
+            },
+            attendances: {
+              where: studentProfileId ? { studentId: studentProfileId } : undefined,
+            },
+          },
+        },
         missions: {
           include: {
             activities: {
-              where: { isActive: true },
+              where: isAdmin ? undefined : { isActive: true },
               orderBy: { orderNum: 'asc' },
               include: {
                 submissions: {
@@ -50,58 +77,65 @@ export async function GET(request: Request) {
       orderBy: { orderNum: 'asc' },
     });
 
+    const formatActivity = (a: any) => {
+      const submission = studentProfileId ? a.submissions?.[0] : null;
+      const attendance = studentProfileId ? a.attendances?.[0] : null;
+
+      if (submission?.status === 'COMPLETED' || submission?.status === 'APPROVED') {
+        status = 'COMPLETED';
+      } else if (submission?.status === 'UNDER_REVIEW' || submission?.status === 'SUBMITTED') {
+        status = 'UNDER_REVIEW';
+      } else if (submission?.status === 'REJECTED') {
+        status = 'REJECTED';
+        rejectionReason = latestApproval?.feedback || null;
+      } else if ((a.verificationType === 'QR' || a.verificationType === 'ONLINE') && attendance?.status === 'PRESENT') {
+        status = 'COMPLETED';
+      } else {
+        status = 'UPCOMING';
+      }
+
+      return {
+        id: a.id,
+        code: a.code,
+        title: a.title,
+        subtitle: a.subtitle,
+        description: a.description,
+        bannerImage: a.bannerImage,
+        date: a.date ? (typeof a.date === 'string' ? a.date : a.date.toISOString()) : new Date().toISOString(),
+        startTime: a.startTime,
+        endTime: a.endTime,
+        location: a.location,
+        mode: a.mode,
+        picName: a.picName,
+        picContact: a.picContact,
+        onlineUrl: a.onlineUrl,
+        verificationType: a.verificationType,
+        xpReward: a.xpReward,
+        qrSecret: a.qrSecret,
+        isActive: a.isActive,
+        status,
+        submissionId: submission?.id || null,
+        submissionPhoto: submission?.evidencePhoto || null,
+        submissionDesc: submission?.description || null,
+        rejectionReason,
+        checkedInAt: attendance?.checkInTime ? attendance.checkInTime.toISOString() : null,
+      };
+    };
+
     const formattedJourneys = journeys.map((j) => {
       let totalActivities = 0;
       let completedActivities = 0;
 
+      // Collect IDs of activities already included in missions
+      const processedActivityIds = new Set<string>();
+
       const missions = j.missions.map((m) => {
         const activities = m.activities.map((a: any) => {
+          processedActivityIds.add(a.id);
           totalActivities++;
-          const submission = studentProfileId ? a.submissions?.[0] : null;
-          const attendance = studentProfileId ? a.attendances?.[0] : null;
-
-          let status = 'UPCOMING';
-          let rejectionReason: string | null = null;
-          let latestApproval = submission?.approvals?.[0];
-
-          if (submission?.status === 'COMPLETED' || attendance?.status === 'PRESENT') {
-            status = 'COMPLETED';
-            completedActivities++;
-          } else if (submission?.status === 'APPROVED') {
-            status = 'COMPLETED';
-            completedActivities++;
-          } else if (submission?.status === 'UNDER_REVIEW' || submission?.status === 'SUBMITTED') {
-            status = 'UNDER_REVIEW';
-          } else if (submission?.status === 'REJECTED') {
-            status = 'REJECTED';
-            rejectionReason = latestApproval?.feedback || null;
-          }
-
-          return {
-            id: a.id,
-            code: a.code,
-            title: a.title,
-            subtitle: a.subtitle,
-            description: a.description,
-            bannerImage: a.bannerImage,
-            date: a.date.toISOString(),
-            startTime: a.startTime,
-            endTime: a.endTime,
-            location: a.location,
-            mode: a.mode,
-            picName: a.picName,
-            picContact: a.picContact,
-            onlineUrl: a.onlineUrl,
-            verificationType: a.verificationType,
-            xpReward: a.xpReward,
-            qrSecret: a.qrSecret,
-            status,
-            submissionId: submission?.id || null,
-            submissionPhoto: submission?.evidencePhoto || null,
-            submissionDesc: submission?.description || null,
-            rejectionReason,
-            checkedInAt: attendance?.checkInTime?.toISOString() || null,
-          };
+          const formatted = formatActivity(a);
+          if (formatted.status === 'COMPLETED') completedActivities++;
+          return formatted;
         });
 
         return {
@@ -117,12 +151,36 @@ export async function GET(request: Request) {
         };
       });
 
+      // Include any activities that belong directly to Journey but not under any mission
+      const unassignedActivities = (j.activities || [])
+        .filter((a: any) => !processedActivityIds.has(a.id))
+        .map((a: any) => {
+          totalActivities++;
+          const formatted = formatActivity(a);
+          if (formatted.status === 'COMPLETED') completedActivities++;
+          return formatted;
+        });
+
+      if (unassignedActivities.length > 0) {
+        missions.push({
+          id: `general-${j.id}`,
+          code: `GEN_${j.code}`,
+          title: 'Agenda Kegiatan',
+          description: 'Daftar kegiatan resmi untuk hari ini.',
+          category: 'MASTAMA' as any,
+          targetCount: unassignedActivities.length,
+          xpReward: 50,
+          icon: 'Compass',
+          activities: unassignedActivities,
+        });
+      }
+
       return {
         id: j.id,
         code: j.code,
         title: j.title,
         subtitle: j.subtitle,
-        targetDate: j.targetDate.toISOString(),
+        targetDate: j.targetDate ? (typeof j.targetDate === 'string' ? j.targetDate : j.targetDate.toISOString()) : new Date().toISOString(),
         mode: j.mode,
         location: j.location,
         isUnlocked: j.isUnlocked,
@@ -132,10 +190,17 @@ export async function GET(request: Request) {
       };
     });
 
-    return NextResponse.json({ 
-      mastamaYears,
-      journeys: formattedJourneys 
-    });
+    return NextResponse.json(
+      {
+        mastamaYears,
+        journeys: formattedJourneys,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        },
+      }
+    );
   } catch (error: any) {
     console.error('Error in GET /api/journeys:', error);
     return NextResponse.json({ error: error?.message || 'Gagal mengambil data journey.' }, { status: 500 });

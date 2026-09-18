@@ -30,12 +30,15 @@ import {
   Cell,
 } from 'recharts';
 
+import ManageYearModal from '@/components/ui/ManageYearModal';
+
 const COLORS = ['#D4AF37', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B'];
 
 export default function AdminDashboardPage() {
   const [statsData, setStatsData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedYearId, setSelectedYearId] = useState<string>('ALL');
+  const [showYearModal, setShowYearModal] = useState(false);
 
   useEffect(() => {
     fetchStats();
@@ -88,18 +91,30 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <select
-            value={selectedYearId}
-            onChange={(e) => setSelectedYearId(e.target.value)}
-            className="px-4 py-2.5 rounded-2xl bg-umla-navy-900 border border-umla-gold/30 text-white font-bold text-xs outline-none focus:border-umla-gold transition-colors cursor-pointer"
-          >
-            <option value="ALL">Semua Tahun</option>
-            {statsData.mastamaYears?.map((y: any) => (
-              <option key={y.id} value={y.id}>
-                Tahun Ajaran {y.year}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-1.5">
+            <select
+              value={selectedYearId}
+              onChange={(e) => setSelectedYearId(e.target.value)}
+              className="px-4 py-2.5 rounded-2xl bg-umla-navy-900 border border-umla-gold/30 text-white font-bold text-xs outline-none focus:border-umla-gold transition-colors cursor-pointer"
+            >
+              <option value="ALL">Semua Tahun</option>
+              {statsData.mastamaYears?.map((y: any) => (
+                <option key={y.id} value={y.id}>
+                  Tahun {y.year} {y.isActive ? '⭐' : ''}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              onClick={() => setShowYearModal(true)}
+              title="Kelola & Tambah Tahun Ajaran Baru (2027, dst)"
+              className="px-3.5 py-2.5 rounded-2xl bg-umla-navy-900 hover:bg-umla-navy-800 border border-umla-gold/40 text-umla-gold font-bold text-xs flex items-center gap-1.5 transition-all hover:scale-105 shadow-md"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>+ Tahun</span>
+            </button>
+          </div>
 
           <Link
             href="/admin/announcements"
@@ -291,6 +306,17 @@ export default function AdminDashboardPage() {
           ))}
         </div>
       </div>
+
+      {/* Manage Year Modal */}
+      <ManageYearModal
+        isOpen={showYearModal}
+        onClose={() => setShowYearModal(false)}
+        existingYears={statsData.mastamaYears || []}
+        onSuccess={(newYearId) => {
+          if (newYearId) setSelectedYearId(newYearId);
+          fetchStats();
+        }}
+      />
     </div>
   );
 }
